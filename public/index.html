@@ -2,10 +2,145 @@
 <html lang="zh">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Save The Date</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#faf6f0" />
+  <title>Save The Date | 黄❤️陈</title>
+  <link rel="stylesheet" href="vendor/animate.min.css" />
+  <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
-  <h1>invite placeholder</h1>
+
+  <!-- floating music disc -->
+  <button id="music-disc" type="button" aria-label="music">
+    <span class="disc-note">♪</span>
+  </button>
+  <audio id="bgm" loop preload="none"></audio>
+
+  <main id="pages">
+
+    <!-- 1. COVER -->
+    <section class="page" id="cover">
+      <div class="frame">
+        <p class="eyebrow anim" data-animate="fadeInDown">SAVE THE DATE</p>
+        <div class="monogram anim" data-animate="zoomIn">
+          <span class="zh-first">黄</span>
+          <span class="heart">❤</span>
+          <span class="zh-second">陈</span>
+        </div>
+        <h1 class="names-en anim" data-animate="fadeInUp">Huang <em>&amp;</em> Chen</h1>
+        <p class="tagline anim" data-animate="fadeInUp" data-delay="200">
+          <span class="zh" data-i18n="tagline.zh"></span>
+          <span class="en" data-i18n="tagline.en"></span>
+        </p>
+      </div>
+    </section>
+
+    <!-- 2. COUNTDOWN -->
+    <section class="page" id="countdown">
+      <h2 class="anim" data-animate="fadeInDown"><span data-i18n="countdownTitle.zh"></span><small data-i18n="countdownTitle.en"></small></h2>
+      <div class="date-line anim" data-animate="fadeInUp">
+        <span id="wedding-date-zh"></span>
+        <span id="wedding-date-en"></span>
+      </div>
+      <div class="clock anim" data-animate="zoomIn" data-delay="150">
+        <div class="unit"><b id="cd-days">--</b><span data-i18n="days.zh"></span><i data-i18n="days.en"></i></div>
+        <div class="unit"><b id="cd-hours">--</b><span data-i18n="hours.zh"></span><i data-i18n="hours.en"></i></div>
+        <div class="unit"><b id="cd-mins">--</b><span data-i18n="mins.zh"></span><i data-i18n="mins.en"></i></div>
+        <div class="unit"><b id="cd-secs">--</b><span data-i18n="secs.zh"></span><i data-i18n="secs.en"></i></div>
+      </div>
+    </section>
+
+    <!-- 3. STORY -->
+    <section class="page" id="story">
+      <h2 class="anim" data-animate="fadeInDown"><span data-i18n="story.title.zh"></span><small data-i18n="story.title.en"></small></h2>
+      <div id="story-paras"></div>
+    </section>
+
+    <!-- 4. DETAILS -->
+    <section class="page" id="details">
+      <h2 class="anim" data-animate="fadeInDown"><span data-i18n="detailsTitle.zh"></span><small data-i18n="detailsTitle.en"></small></h2>
+      <div class="venue anim" data-animate="fadeInUp">
+        <p class="venue-name"><span id="venue-zh"></span><span id="venue-en"></span></p>
+        <p class="venue-addr"><span id="addr-zh"></span><span id="addr-en"></span></p>
+      </div>
+      <ul id="program" class="anim" data-animate="fadeInUp" data-delay="120"></ul>
+      <p id="dresscode" class="dresscode anim" data-animate="fadeInUp" data-delay="200"></p>
+      <div class="detail-actions anim" data-animate="fadeInUp" data-delay="260">
+        <a id="maps-link" class="btn" target="_blank" rel="noopener"><span data-i18n="mapBtn.zh"></span><small data-i18n="mapBtn.en"></small></a>
+        <a id="cal-link" class="btn btn-outline"><span data-i18n="calBtn.zh"></span><small data-i18n="calBtn.en"></small></a>
+      </div>
+    </section>
+
+    <!-- 5. GALLERY -->
+    <section class="page page-scrollable" id="gallery">
+      <h2 class="anim" data-animate="fadeInDown"><span data-i18n="galleryTitle.zh"></span><small data-i18n="galleryTitle.en"></small></h2>
+      <div id="gallery-grid" class="grid"></div>
+    </section>
+
+    <!-- 6. RSVP -->
+    <section class="page page-scrollable" id="rsvp">
+      <h2 class="anim" data-animate="fadeInDown"><span data-i18n="rsvp.title.zh"></span><small data-i18n="rsvp.title.en"></small></h2>
+      <p class="deadline anim" data-animate="fadeIn" data-delay="100"><span data-i18n="rsvp.deadlineLabel.zh"></span><span data-i18n="rsvp.deadlineLabel.en"></span></p>
+
+      <form id="rsvp-form" class="anim" data-animate="fadeInUp" data-delay="180" novalidate>
+        <label>
+          <span data-i18n="rsvp.nameLabel.zh"></span><small data-i18n="rsvp.nameLabel.en"></small>
+          <input name="name" type="text" maxlength="80" required autocomplete="name" />
+        </label>
+
+        <fieldset class="attending">
+          <legend><span data-i18n="rsvp.attendingLabel.zh"></span><small data-i18n="rsvp.attendingLabel.en"></small></legend>
+          <label class="radio"><input type="radio" name="attending" value="yes" checked /><span data-i18n="rsvp.yes.zh"></span><small data-i18n="rsvp.yes.en"></small></label>
+          <label class="radio"><input type="radio" name="attending" value="no" /><span data-i18n="rsvp.no.zh"></span><small data-i18n="rsvp.no.en"></small></label>
+        </fieldset>
+
+        <label id="guests-wrap">
+          <span data-i18n="rsvp.guestsLabel.zh"></span><small data-i18n="rsvp.guestsLabel.en"></small>
+          <select name="guests"></select>
+        </label>
+
+        <div class="contact-group">
+          <label>
+            <span data-i18n="rsvp.phoneLabel.zh"></span><small data-i18n="rsvp.phoneLabel.en"></small>
+            <input name="phone" type="tel" inputmode="tel" placeholder="+60123456789" autocomplete="tel" />
+          </label>
+          <label>
+            <span data-i18n="rsvp.instagramLabel.zh"></span><small data-i18n="rsvp.instagramLabel.en"></small>
+            <input name="instagram" type="text" placeholder="@yourname" autocapitalize="off" spellcheck="false" />
+          </label>
+          <p class="hint"><span data-i18n="rsvp.contactHint.zh"></span><span data-i18n="rsvp.contactHint.en"></span></p>
+        </div>
+
+        <label>
+          <span data-i18n="rsvp.messageLabel.zh"></span><small data-i18n="rsvp.messageLabel.en"></small>
+          <textarea name="message" rows="3" maxlength="500"></textarea>
+        </label>
+
+        <!-- honeypot: hidden from humans -->
+        <label class="hp" aria-hidden="true">Website<input name="website" type="text" tabindex="-1" autocomplete="off" /></label>
+
+        <button type="submit" class="submit-btn"><span data-i18n="rsvp.submit.zh"></span></button>
+        <p id="form-error" class="form-error" hidden></p>
+      </form>
+
+      <div id="rsvp-success" class="success" hidden>
+        <div class="success-heart">❤</div>
+        <h3 data-i18n="rsvp.successTitle.zh"></h3>
+        <p data-i18n="rsvp.successBody.en"></p>
+      </div>
+    </section>
+  </main>
+
+  <!-- page dots -->
+  <nav id="dots" aria-label="pages"></nav>
+
+  <!-- swipe hint arrow -->
+  <div id="swipe-hint"><span></span><i></i></div>
+
+  <!-- lightbox -->
+  <div id="lightbox" hidden><img alt="" /><button type="button" aria-label="close">×</button></div>
+
+  <script src="js/content.js"></script>
+  <script src="js/main.js" type="module"></script>
 </body>
 </html>

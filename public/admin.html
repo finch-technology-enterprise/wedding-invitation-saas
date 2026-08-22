@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>RSVP Admin</title>
+  <style>
+    :root { --gold: #b08d57; --ink: #3d3229; --line: #e5dccf; }
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, "PingFang TC", "Microsoft YaHei", sans-serif; margin: 0; background: #faf6f0; color: var(--ink); padding: 24px 16px 60px; }
+    h1 { font-size: 20px; letter-spacing: 0.08em; }
+    .sub { color: #8a7a6a; font-size: 13px; margin-top: 4px; }
+    .bar { display: flex; gap: 8px; margin: 18px 0; flex-wrap: wrap; align-items: center; }
+    input { flex: 1; min-width: 200px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; font-size: 15px; }
+    button, a.btn2 { padding: 10px 16px; border-radius: 8px; border: none; background: var(--gold); color: #fff; font-size: 14px; cursor: pointer; text-decoration: none; display: inline-block; }
+    .btn2.gray { background: #9c8d7b; }
+    table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 6px rgba(0,0,0,.06); margin-top: 8px; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); font-size: 14px; vertical-align: top; }
+    th { background: #f3ece1; font-size: 12px; letter-spacing: .05em; }
+    tr:last-child td { border-bottom: none; }
+    .yes { color: #1e7e46; font-weight: 600; } .no { color: #b03a2e; font-weight: 600; }
+    a { color: var(--gold); }
+    .msg { max-width: 260px; white-space: pre-wrap; }
+    .err { color: #b03a2e; margin-top: 12px; }
+    .count { margin-left: auto; color: #8a7a6a; font-size: 13px; }
+    @media (max-width: 640px) {
+      table, thead, tbody, tr, td { display: block; }
+      thead { display: none; }
+      tr { background: #fff; border-radius: 10px; margin-bottom: 10px; padding: 6px 0; box-shadow: 0 1px 6px rgba(0,0,0,.06); }
+      td { border: none; padding: 4px 14px; }
+      td::before { content: attr(data-k) ": "; color: #8a7a6a; font-size: 12px; }
+      .msg { max-width: none; }
+    }
+  </style>
+</head>
+<body>
+  <h1>RSVP Admin · 敬盼回复管理</h1>
+  <p class="sub">Responses newest first · 最新回复在最上</p>
+
+  <div class="bar">
+    <input id="key" type="password" placeholder="Admin key / 管理密钥" />
+    <button id="load">Load 载入</button>
+    <a id="csv" class="btn2 gray" download="rsvps.csv">CSV</a>
+    <span id="count" class="count"></span>
+  </div>
+  <p id="err" class="err" hidden></p>
+  <table>
+    <thead>
+      <tr><th>#</th><th>Name 姓名</th><th>Attending 出席</th><th>Pax 人数</th><th>Phone 电话</th><th>Instagram</th><th>Message 留言</th><th>Time 时间</th></tr>
+    </thead>
+    <tbody id="rows"><tr><td colspan="8">Enter key and press Load.</td></tr></tbody>
+  </table>
+
+<script>
+  const $ = (s) => document.querySelector(s);
+  const keyInput = $("#key");
+  keyInput.value = localStorage.getItem("adminKey") || "";
+
+  function esc(s) {
+    return String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  }
+
+  async function load() {
+    const key = keyInput.value.trim();
+    if (!key) return;
+    localStorage.setItem("adminKey", key);
+    $("#err").hidden = true;
+
+    try {
+      const res = await fetch("/api/rsvps", { headers: { "x-admin-key": key } });
+      if (res.status === 401) throw new Error("Wrong key / 密钥错误");
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const data = await res.json();
+
+      const rows = $("#rows");
+      if (!data.rsvps.length) {
+        rows.innerHTML = '<tr><td colspan="8">No RSVPs yet · 还没有回复</td></tr>';
+        $("#count").textContent = "";
+        $("#csv").href = "data:text/csv," + encodeURIComponent("");
+        return;
+      }
+
+      let yesCount = 0, paxCount = 0;
+      rows.innerHTML = data.rsvps
+        .map((r) => {
+          if (r.attending) { yesCount++; paxCount += r.guests; }
+          const phone = r.phone
+            ? `<a href="https://wa.me/${esc(r.phone.replace(/[^0-9]/g, ""))}" target="_blank" rel="noopener">${esc(r.phone)}</a>`
+            : "—";
+          const ig = r.instagram ? `<a href="https://instagram.com/${encodeURIComponent(r.instagram)}" target="_blank" rel="noopener">@${esc(r.instagram)}</a>` : "—";
+          return `<tr>
+            <td data-k="#">${r.id}</td>
+            <td data-k="Name">${esc(r.name)}</td>
+            <td data-k="Attending" class="${r.attending ? "yes" : "no"}">${r.attending ? "YES ✓" : "NO ✗"}</td>
+            <td data-k="Pax">${r.attending ? r.guests : "—"}</td>
+            <td data-k="Phone">${phone}</td>
+            <td data-k="IG">${ig}</td>
+            <td data-k="Message" class="msg">${esc(r.message) || "—"}</td>
+            <td data-k="Time">${esc(r.created_at)}</td>
+          </tr>`;
+        })
+        .join("");
+
+      $("#count").textContent = `${data.rsvps.length} replies · ${yesCount} attending · ${paxCount} pax`;
+
+      const head = "id,name,attending,guests,phone,instagram,message,created_at";
+      const lines = data.rsvps.map((r) =>
+        [r.id, JSON.stringify(r.name), r.attending ? "yes" : "no", r.attending ? r.guests : 0, JSON.stringify(r.phone || ""), JSON.stringify(r.instagram || ""), JSON.stringify(r.message || ""), JSON.stringify(r.created_at)].join(",")
+      );
+      $("#csv").href = "data:text/csv;charset=utf-8," + encodeURIComponent([head, ...lines].join("\n"));
+    } catch (e) {
+      $("#err").textContent = e.message;
+      $("#err").hidden = false;
+    }
+  }
+
+  $("#load").addEventListener("click", load);
+  keyInput.addEventListener("keydown", (e) => e.key === "Enter" && load());
+  if (keyInput.value) load();
+</script>
+</body>
+</html>

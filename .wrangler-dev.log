@@ -24,5 +24,5 @@ Useful routes:
 If the routes above don't cover what you need, fetch the full OpenAPI schema (large - use only as a last resort):
   GET http://localhost:8799/cdn-cgi/local/explorer/api - OpenAPI schema
 [wrangler:info] Ready on http://localhost:8799
-[wrangler:info] GET / 200 OK (14ms)
-[wrangler:info] GET /api/rsvp 200 OK (9ms)
+[wrangler:info] GET /admin.html 307 Temporary Redirect (5ms)
+[wrangler:info] GET /admin 200 OK (4ms)
