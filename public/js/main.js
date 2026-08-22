@@ -16,12 +16,73 @@ $$("[data-i18n]").forEach((el) => {
 /* ---------- wedding date ---------- */
 const weddingDate = new Date(I.weddingISO);
 
-$("#wedding-date-zh").textContent = new Intl.DateTimeFormat("zh-TW", {
+const wZh = $("#wedding-date-zh");
+if (wZh) wZh.textContent = new Intl.DateTimeFormat("zh-TW", {
   year: "numeric", month: "long", day: "numeric", weekday: "long",
 }).format(weddingDate);
-$("#wedding-date-en").textContent = new Intl.DateTimeFormat("en-GB", {
+const wEn = $("#wedding-date-en");
+if (wEn) wEn.textContent = new Intl.DateTimeFormat("en-GB", {
   weekday: "short", day: "numeric", month: "long", year: "numeric",
 }).format(weddingDate);
+
+/* cover extras */
+const covDate = $("#cover-date");
+if (covDate && I.couple?.dateLabel) covDate.textContent = I.couple.dateLabel;
+else if (covDate) covDate.textContent = `${String(weddingDate.getFullYear())}.${String(weddingDate.getMonth()+1).padStart(2,"0")}.${String(weddingDate.getDate()).padStart(2,"0")}`;
+const pillMap = [["#pill-zh-a", I.couple?.fullZhA],["#pill-en-a", I.couple?.fullEnA],["#pill-zh-b", I.couple?.fullZhB],["#pill-en-b", I.couple?.fullEnB]];
+for (const [sel,val] of pillMap) { const el=$(sel); if(el && val) el.textContent=val; }
+const vbride=$("#vbride"); if(vbride && I.couple?.fullZhB) vbride.textContent=I.couple.fullZhB;
+const vgroom=$("#vgroom"); if(vgroom && I.couple?.fullZhA) vgroom.textContent=I.couple.fullZhA;
+const footPairs=[["#foot-zh-a",I.couple?.fullZhA],["#foot-en-a",I.couple?.fullEnA],["#foot-zh-b",I.couple?.fullZhB],["#foot-en-b",I.couple?.fullEnB]];
+for (const [sel,val] of footPairs){const el=$(sel); if(el&&val) el.textContent=val;}
+const footVenue=$("#foot-venue"); if(footVenue) footVenue.textContent=`${I.details?.venue?.nameZh||""} ${I.details?.venue?.addressZh||""}`.trim();
+const lunarEl=$("#lunar-label"); if(lunarEl) lunarEl.textContent = I.lunarLabel ? `${new Intl.DateTimeFormat("zh-TW",{year:"numeric",month:"long",day:"numeric",weekday:"long"}).format(weddingDate)}  ${I.lunarLabel}` : new Intl.DateTimeFormat("zh-TW",{year:"numeric",month:"long",day:"numeric"}).format(weddingDate);
+
+/* poetic etc */
+const poemH=$("#poem-heading"); if(poemH && I.story?.intro?.heading) poemH.textContent=I.story.intro.heading.zh;
+const poemLinesEl=$("#poem-lines");
+if(poemLinesEl && I.story?.intro?.lines){
+  poemLinesEl.innerHTML="";
+  for(const ln of I.story.intro.lines){
+    const p=document.createElement("p"); p.textContent=ln.zh;
+    if(ln.zh==="{囍}") p.className="xi";
+    poemLinesEl.appendChild(p);
+  }
+}
+const journeyTitle=$("#journey-title"); if(journeyTitle && I.story?.journey?.heading) journeyTitle.textContent=I.story.journey.heading.zh;
+const journeySub=$("#journey-sub"); if(journeySub && I.story?.journey?.lines){
+  journeySub.innerHTML = I.story.journey.lines.map(l=>`<span>${l.zh}</span>`).join("<br>");
+}
+const letterEl=$("#letter-lines");
+if(letterEl && I.story?.letter?.lines){
+  letterEl.innerHTML = I.story.letter.lines.map(l=>`<p>${l.zh}</p>`).join("");
+}
+const poeticLine=$("#poetic-line"); if(poeticLine && I.story?.letter){ /* keep static from html */ }
+const closingPoemEl=$("#closing-poem");
+if(closingPoemEl && I.story?.closingPoem){
+  closingPoemEl.innerHTML = I.story.closingPoem.map(l=>`<p>${l.zh}</p>`).join("");
+}
+/* calendar for wedding month */
+(function buildCalendar(){
+  const cal=$("#calendar"); if(!cal) return;
+  const y=weddingDate.getFullYear(), m=weddingDate.getMonth(), d=weddingDate.getDate();
+  const first=new Date(y,m,1).getDay(); // 0 Sun
+  const shift=(first===0?6:first-1); // Mon=0 ... Sun=6
+  const days=new Date(y,m+1,0).getDate();
+  const wds=["一","二","三","四","五","六","日"];
+  let html=`<div class="cal-head"><b>12 <span style="font-size:14px">/ 07</span></b><span>-2025-</span></div>`;
+  // override head with real month
+  html=`<div class="cal-head"><b>${String(m+1).padStart(2,"0")} <span style="font-size:14px">/ ${String(d).padStart(2,"0")}</span></b><span>-${y}-</span></div>`;
+  html+=`<div class="cal-grid">`;
+  for(const w of wds) html+=`<div class="wd">${w}</div>`;
+  for(let i=0;i<shift;i++) html+=`<div class="d muted"></div>`;
+  for(let i=1;i<=days;i++){
+    const cls=i===d ? 'd mark' : 'd';
+    html+=`<div class="${cls}">${i}</div>`;
+  }
+  html+=`</div>`;
+  cal.innerHTML=html;
+})();
 
 /* ---------- countdown ---------- */
 const cdEls = {
@@ -51,54 +112,61 @@ function tickCountdown() {
 tickCountdown();
 setInterval(tickCountdown, 1000);
 
-/* ---------- story ---------- */
+/* ---------- story (legacy compat) ---------- */
 const paras = $("#story-paras");
-for (const p of I.story.paragraphs) {
-  const el = document.createElement("p");
-  const zh = document.createElement("span");
-  zh.className = "zh";
-  zh.textContent = p.zh;
-  const en = document.createElement("span");
-  en.className = "en";
-  en.textContent = p.en;
-  el.append(zh, en);
-  paras.appendChild(el);
+if (paras && Array.isArray(I.story?.paragraphs)) {
+  for (const p of I.story.paragraphs) {
+    const el = document.createElement("p");
+    const zh = document.createElement("span");
+    zh.className = "zh";
+    zh.textContent = p.zh;
+    const en = document.createElement("span");
+    en.className = "en";
+    en.textContent = p.en;
+    el.append(zh, en);
+    paras.appendChild(el);
+  }
 }
 
 /* ---------- details ---------- */
-$("#venue-zh").textContent = I.details.venue.nameZh;
-$("#venue-en").textContent = I.details.venue.nameEn;
-$("#addr-zh").textContent = I.details.venue.addressZh;
-$("#addr-en").textContent = I.details.venue.addressEn;
+const vZh=$("#venue-zh"), vEn=$("#venue-en"), aZh=$("#addr-zh"), aEn=$("#addr-en");
+if(vZh) vZh.textContent = I.details.venue.nameZh;
+if(vEn) vEn.textContent = I.details.venue.nameEn;
+if(aZh) aZh.textContent = I.details.venue.addressZh;
+if(aEn) aEn.textContent = I.details.venue.addressEn;
 
 const program = $("#program");
-for (const item of I.details.program) {
-  const li = document.createElement("li");
-  const b = document.createElement("b");
-  b.textContent = item.time;
-  const zh = document.createElement("span");
-  zh.textContent = item.zh;
-  const en = document.createElement("i");
-  en.className = "en";
-  en.textContent = item.en;
-  li.append(b, zh, en);
-  program.appendChild(li);
+if (program && Array.isArray(I.details?.program)) {
+  for (const item of I.details.program) {
+    const li = document.createElement("li");
+    const b = document.createElement("b");
+    b.textContent = item.time;
+    const zh = document.createElement("span");
+    zh.textContent = item.zh;
+    const en = document.createElement("i");
+    en.className = "en";
+    en.textContent = item.en;
+    li.append(b, zh, en);
+    program.appendChild(li);
+  }
 }
 
 const dress = $("#dresscode");
-if (I.details.dressCode) {
-  const zh = document.createElement("span");
-  zh.className = "zh";
-  zh.textContent = I.details.dressCode.zh;
-  const en = document.createElement("span");
-  en.className = "en";
-  en.textContent = I.details.dressCode.en;
-  dress.append(zh, en);
-} else {
-  dress.remove();
+if (dress) {
+  if (I.details.dressCode) {
+    const zh = document.createElement("span");
+    zh.className = "zh";
+    zh.textContent = I.details.dressCode.zh;
+    const en = document.createElement("span");
+    en.className = "en";
+    en.textContent = I.details.dressCode.en;
+    dress.append(zh, en);
+  } else {
+    dress.remove();
+  }
 }
 
-$("#maps-link").href = I.details.venue.mapsUrl;
+const mapsLink=$("#maps-link"); if(mapsLink) mapsLink.href = I.details.venue.mapsUrl;
 
 /* ---------- add-to-calendar (.ics built client-side) ---------- */
 function icsStamp(date) {
@@ -151,8 +219,6 @@ for (const src of I.photos) {
   btn.addEventListener("click", () => {
     if (ok) openLightbox(src);
   });
-  grid.appendChild(btn);
-}
   grid.appendChild(btn);
 }
 

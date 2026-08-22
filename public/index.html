@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#faf6f0" />
   <title>Save The Date | 黄❤️陈</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="vendor/animate.min.css" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
@@ -18,45 +19,76 @@
 
   <main id="pages">
 
-    <!-- 1. COVER -->
+    <!-- 1. COVER — silk, arch photo, pill -->
     <section class="page" id="cover">
-      <div class="frame">
-        <p class="eyebrow anim" data-animate="fadeInDown">SAVE THE DATE</p>
-        <div class="monogram anim" data-animate="zoomIn">
-          <span class="zh-first">黄</span>
-          <span class="heart">❤</span>
-          <span class="zh-second">陈</span>
+      <div class="cover-inner">
+        <p class="cover-bracket anim" data-animate="fadeInDown">【婚礼邀请函】</p>
+        <p class="cover-welcome anim" data-animate="fadeInDown" data-delay="120">WELCOME TO OUR WEDDING</p>
+        <p class="cover-date anim" data-animate="fadeInDown" data-delay="220" id="cover-date">2025.12.07</p>
+
+        <div class="arch-wrap anim" data-animate="zoomIn" data-delay="280">
+          <div class="arch-photo" id="arch-photo">
+            <img id="cover-photo" src="assets/photos/photo1.jpg" alt="" loading="eager" onerror="this.style.display='none'" />
+            <div class="arch-fallback" aria-hidden="true"><span>❤</span></div>
+          </div>
+          <div class="pill">
+            <div class="pill-rings" aria-hidden="true">
+              <!-- twin rings svg -->
+              <svg width="44" height="28" viewBox="0 0 44 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="15" cy="16" r="10" stroke="#b08d57" stroke-width="1.3"/>
+                <circle cx="29" cy="16" r="10" stroke="#b08d57" stroke-width="1.3"/>
+                <circle cx="15" cy="7" r="1.7" fill="#c0392b"/><circle cx="29" cy="7" r="1" fill="#c0392b"/><circle cx="22" cy="5" r="0.9" fill="#c0392b"/>
+              </svg>
+            </div>
+            <p class="pill-zh" id="pill-zh-a">黄嘉俊</p>
+            <p class="pill-en" id="pill-en-a">WONG KAR CHUN</p>
+            <p class="pill-amp">&</p>
+            <p class="pill-zh" id="pill-zh-b">陈佩筠</p>
+            <p class="pill-en" id="pill-en-b">CHAN POOI KUAN</p>
+          </div>
         </div>
-        <h1 class="names-en anim" data-animate="fadeInUp">Huang <em>&amp;</em> Chen</h1>
-        <p class="tagline anim" data-animate="fadeInUp" data-delay="200">
-          <span class="zh" data-i18n="tagline.zh"></span>
-          <span class="en" data-i18n="tagline.en"></span>
-        </p>
       </div>
     </section>
 
-    <!-- 2. COUNTDOWN -->
+    <!-- 2. POEM — "我"被慢慢写成了"我们" -->
+    <section class="page" id="poem">
+      <p class="script anim" data-animate="fadeInDown">Wedding Invitation</p>
+      <h2 class="poem-heading anim" data-animate="fadeInUp" id="poem-heading">“我”被慢慢写成了“我们”</h2>
+      <div class="poem-lines anim" data-animate="fadeInUp" data-delay="140" id="poem-lines"></div>
+      <div class="couple-strip anim" data-animate="zoomIn" data-delay="220">
+        <span class="vlabel vleft">BRIDE<br><small id="vbride">陈佩筠</small></span>
+        <div class="couple-photo"><img src="assets/photos/photo2.jpg" alt="" loading="lazy" onerror="this.style.display='none';this.parentElement.classList.add('noimg')" /></div>
+        <span class="vlabel vright">GROOM<br><small id="vgroom">黄嘉俊</small></span>
+      </div>
+    </section>
+
+    <!-- 3. JOURNEY + LETTER -->
+    <section class="page" id="journey">
+      <p class="xi anim" data-animate="fadeInDown">{囍}</p>
+      <h2 class="anim" data-animate="fadeInUp"><span id="journey-title">一场崭新的旅程即将开启</span></h2>
+      <p class="journey-sub anim" data-animate="fadeInUp" data-delay="100" id="journey-sub"></p>
+      <div class="letter anim" data-animate="fadeInUp" data-delay="180" id="letter-lines"></div>
+      <p class="poetic anim" data-animate="fadeInUp" data-delay="260" id="poetic-line">一面湖，一页夏，一丛月亮，一个家</p>
+    </section>
+
+    <!-- 4. COUNTDOWN + CALENDAR -->
     <section class="page" id="countdown">
-      <h2 class="anim" data-animate="fadeInDown"><span data-i18n="countdownTitle.zh"></span><small data-i18n="countdownTitle.en"></small></h2>
-      <div class="date-line anim" data-animate="fadeInUp">
-        <span id="wedding-date-zh"></span>
-        <span id="wedding-date-en"></span>
+      <p class="script anim" data-animate="fadeInDown"><span class="script-line">Time</span><span class="script-sub">婚礼时间</span></p>
+      <div class="date-block anim" data-animate="fadeInUp">
+        <p id="wedding-date-zh" class="date-zh"></p>
+        <p id="lunar-label" class="lunar"></p>
       </div>
-      <div class="clock anim" data-animate="zoomIn" data-delay="150">
-        <div class="unit"><b id="cd-days">--</b><span data-i18n="days.zh"></span><i data-i18n="days.en"></i></div>
-        <div class="unit"><b id="cd-hours">--</b><span data-i18n="hours.zh"></span><i data-i18n="hours.en"></i></div>
-        <div class="unit"><b id="cd-mins">--</b><span data-i18n="mins.zh"></span><i data-i18n="mins.en"></i></div>
-        <div class="unit"><b id="cd-secs">--</b><span data-i18n="secs.zh"></span><i data-i18n="secs.en"></i></div>
+      <div class="calendar anim" data-animate="zoomIn" data-delay="120" id="calendar"></div>
+      <div class="clock anim" data-animate="zoomIn" data-delay="180">
+        <div class="unit"><b id="cd-days">--</b><span>天</span><i>Days</i></div>
+        <div class="unit"><b id="cd-hours">--</b><span>时</span><i>Hours</i></div>
+        <div class="unit"><b id="cd-mins">--</b><span>分</span><i>Mins</i></div>
+        <div class="unit"><b id="cd-secs">--</b><span>秒</span><i>Secs</i></div>
       </div>
+      <p class="en-quote anim" data-animate="fadeIn" data-delay="260">I'm so happy I get to be next to you</p>
     </section>
 
-    <!-- 3. STORY -->
-    <section class="page" id="story">
-      <h2 class="anim" data-animate="fadeInDown"><span data-i18n="story.title.zh"></span><small data-i18n="story.title.en"></small></h2>
-      <div id="story-paras"></div>
-    </section>
-
-    <!-- 4. DETAILS -->
+    <!-- 5. DETAILS -->
     <section class="page" id="details">
       <h2 class="anim" data-animate="fadeInDown"><span data-i18n="detailsTitle.zh"></span><small data-i18n="detailsTitle.en"></small></h2>
       <div class="venue anim" data-animate="fadeInUp">
@@ -65,19 +97,20 @@
       </div>
       <ul id="program" class="anim" data-animate="fadeInUp" data-delay="120"></ul>
       <p id="dresscode" class="dresscode anim" data-animate="fadeInUp" data-delay="200"></p>
-      <div class="detail-actions anim" data-animate="fadeInUp" data-delay="260">
+      <div class="poem-tail anim" data-animate="fadeInUp" data-delay="240" id="closing-poem"></div>
+      <div class="detail-actions anim" data-animate="fadeInUp" data-delay="300">
         <a id="maps-link" class="btn" target="_blank" rel="noopener"><span data-i18n="mapBtn.zh"></span><small data-i18n="mapBtn.en"></small></a>
         <a id="cal-link" class="btn btn-outline"><span data-i18n="calBtn.zh"></span><small data-i18n="calBtn.en"></small></a>
       </div>
     </section>
 
-    <!-- 5. GALLERY -->
+    <!-- 6. GALLERY -->
     <section class="page page-scrollable" id="gallery">
       <h2 class="anim" data-animate="fadeInDown"><span data-i18n="galleryTitle.zh"></span><small data-i18n="galleryTitle.en"></small></h2>
       <div id="gallery-grid" class="grid"></div>
     </section>
 
-    <!-- 6. RSVP -->
+    <!-- 7. RSVP -->
     <section class="page page-scrollable" id="rsvp">
       <h2 class="anim" data-animate="fadeInDown"><span data-i18n="rsvp.title.zh"></span><small data-i18n="rsvp.title.en"></small></h2>
       <p class="deadline anim" data-animate="fadeIn" data-delay="100"><span data-i18n="rsvp.deadlineLabel.zh"></span><span data-i18n="rsvp.deadlineLabel.en"></span></p>
@@ -116,7 +149,6 @@
           <textarea name="message" rows="3" maxlength="500"></textarea>
         </label>
 
-        <!-- honeypot: hidden from humans -->
         <label class="hp" aria-hidden="true">Website<input name="website" type="text" tabindex="-1" autocomplete="off" /></label>
 
         <button type="submit" class="submit-btn"><span data-i18n="rsvp.submit.zh"></span></button>
@@ -126,7 +158,15 @@
       <div id="rsvp-success" class="success" hidden>
         <div class="success-heart">❤</div>
         <h3 data-i18n="rsvp.successTitle.zh"></h3>
-        <p data-i18n="rsvp.successBody.en"></p>
+        <p data-i18n="rsvp.successBody.zh"></p>
+        <p data-i18n="rsvp.successBody.en" class="en"></p>
+      </div>
+
+      <div class="footer-names anim" data-animate="fadeInUp" data-delay="260">
+        <p class="thanks">感谢你 / 不远万里 / 为我们祝福<br>婚礼见</p>
+        <p class="amp">&</p>
+        <p class="fnames"><span id="foot-zh-a"></span> <span id="foot-en-a" class="en"></span> & <span id="foot-zh-b"></span> <span id="foot-en-b" class="en"></span></p>
+        <p class="venue-mini" id="foot-venue"></p>
       </div>
     </section>
   </main>

@@ -60,7 +60,45 @@ h2 small {
   .anim { opacity: 1 !important; }
 }
 
-/* ---------- cover ---------- */
+/* ---------- cover (original faithful) ---------- */
+#cover {
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgba(255,255,255,0.9), transparent 55%),
+    linear-gradient(180deg, #fdfbf8 0%, #faf6f0 55%, #f2e9dc 100%);
+  padding-bottom: 120px;
+  min-height: 100dvh;
+}
+#cover .cover-inner { padding-bottom: 56px; }
+#cover .cover-inner { display:flex; flex-direction:column; align-items:center; max-width:380px; width:100%; }
+.cover-bracket { font-family: var(--serif-zh); font-size:15px; color:#8a5530; letter-spacing:0.14em; }
+.cover-welcome { font-family: var(--serif-en); font-size:13px; letter-spacing:0.22em; color:var(--ink); margin-top:6px; }
+.cover-date { font-family: var(--serif-en); font-size:15px; letter-spacing:0.18em; color:var(--ink); margin-top:8px; }
+.arch-wrap { position:relative; margin-top:22px; width:min(86vw,360px); }
+.arch-photo {
+  width:100%; aspect-ratio: 1.12 / 1;
+  border-radius: 180px 180px 14px 14px;
+  overflow:hidden;
+  background: linear-gradient(135deg,#efe6da,#d9c8b8);
+  border:1px solid rgba(176,141,87,0.2);
+  position:relative;
+}
+.arch-photo img { width:100%; height:100%; object-fit:cover; display:block; }
+.arch-fallback { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:rgba(176,141,87,0.45); font-size:48px; }
+.arch-photo img[src]:not([src=""]) + .arch-fallback { display:none; }
+.pill {
+  position:absolute; left:50%; bottom:-46px; transform:translateX(-50%);
+  width:190px; padding:14px 14px 16px;
+  background:#fff; border-radius: 44px 44px 18px 18px;
+  box-shadow: 0 10px 26px rgba(61,50,41,0.12);
+  border:1px solid rgba(176,141,87,0.18);
+  text-align:center;
+}
+.pill-rings { margin-bottom:4px; color:var(--gold); }
+.pill-zh { font-family:var(--serif-zh); font-size:15px; letter-spacing:0.12em; color:var(--ink); }
+.pill-en { font-family:var(--serif-en); font-size:9px; letter-spacing:0.14em; color:var(--ink-soft); margin-top:1px; text-transform:uppercase; }
+.pill-amp { font-family:var(--serif-en); font-style:italic; color:var(--gold); margin:3px 0; font-size:16px; }
+
+/* keep old .frame etc for legacy but new cover uses above */
 #cover .frame {
   border: 1px solid var(--gold-soft);
   outline: 1px solid var(--gold-soft);
@@ -84,6 +122,41 @@ h2 small {
 .tagline { margin-top: 18px; color: var(--ink-soft); }
 .tagline .zh { display: block; font-size: 17px; letter-spacing: 0.2em; }
 .tagline .en, .en { display: block; font-size: 12px; font-style: italic; margin-top: 4px; }
+
+/* ---------- poem / journey ---------- */
+.script { font-family: "Snell Roundhand","Zapfino","Bradley Hand",cursive; font-size:22px; color:#a07d4f; letter-spacing:0.08em; }
+.script-line { display:block; font-size:30px; font-style:italic; }
+.script-sub { display:block; font-family:var(--serif-zh); font-size:12px; letter-spacing:0.4em; color:#7a5a3a; margin-top:4px; }
+.poem-heading { font-family:var(--serif-zh); font-size:20px; color:#6b3e2e; letter-spacing:0.08em; margin-top:12px; }
+.poem-lines { margin-top:18px; font-family:var(--serif-zh); font-size:14px; line-height:2; color:#5a3e2b; }
+.poem-lines p { margin:0; }
+.poem-lines .xi { color:#c0392b; font-size:16px; }
+.couple-strip { display:flex; align-items:center; gap:10px; margin-top:28px; width:min(92vw,380px); justify-content:center; }
+.couple-photo { width:176px; aspect-ratio:0.78; border-radius:8px; overflow:hidden; background:linear-gradient(135deg,#efe6da,#d9c8b8); flex-shrink:0; }
+.couple-photo img { width:100%; height:100%; object-fit:cover; }
+.couple-photo.noimg { display:flex; align-items:center; justify-content:center; color:rgba(176,141,87,0.5); }
+.couple-photo.noimg::after { content:"❤"; font-size:28px; }
+.vlabel { writing-mode:vertical-rl; font-family:var(--serif-en); font-size:13px; letter-spacing:0.2em; color:#7a5a3a; }
+.vlabel small { font-family:var(--serif-zh); font-size:11px; color:var(--ink-soft); letter-spacing:0.12em; }
+
+#journey .xi { font-size:28px; color:#c0392b; letter-spacing:0.2em; }
+#journey h2 { font-size:20px; color:#6b3e2e; margin-top:10px; }
+.journey-sub { font-family:var(--serif-zh); font-size:15px; color:#5a3e2b; margin-top:10px; }
+.letter { margin-top:22px; font-family:var(--serif-zh); font-size:13px; line-height:2; color:#5a3e2b; }
+.letter p { margin:0; }
+.poetic { margin-top:22px; font-family:var(--serif-zh); font-size:11px; letter-spacing:0.18em; color:#7a5a3a; }
+
+/* ---------- calendar ---------- */
+.calendar { width:min(92vw,320px); background:rgba(255,255,255,0.7); border:1px solid rgba(176,141,87,0.18); border-radius:12px; padding:12px 10px; backdrop-filter:blur(6px); }
+.cal-head { display:flex; justify-content:space-between; align-items:baseline; padding:0 4px 8px; border-bottom:1px solid rgba(176,141,87,0.22); }
+.cal-head b { font-family:var(--serif-en); font-size:22px; color:#6b3e2e; }
+.cal-head span { font-size:12px; color:var(--ink-soft); }
+.cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; margin-top:8px; font-size:12px; }
+.cal-grid .wd { color:#7a5a3a; font-size:11px; padding:4px 0; }
+.cal-grid .d { padding:6px 0; border-radius:6px; position:relative; color:var(--ink); }
+.cal-grid .d.mark { background:rgba(192,57,43,0.08); color:#c0392b; font-weight:600; }
+.cal-grid .d.mark::after { content:"❤"; position:absolute; right:2px; top:1px; font-size:9px; }
+.cal-grid .d.muted { color:#c9b9a5; }
 
 /* ---------- countdown ---------- */
 .date-line { margin: 26px 0 34px; color: var(--gold); }
@@ -117,6 +190,17 @@ h2 small {
 #program li .en { display: inline-block; margin-left: 8px; color: var(--ink-soft); font-size: 12px; }
 
 .dresscode { margin-top: 18px; font-size: 13px; color: var(--ink-soft); }
+.poem-tail { margin-top:22px; font-family:var(--serif-zh); font-size:13px; line-height:2; color:#5a3e2b; }
+.poem-tail p { margin:0; }
+.footer-names { margin-top:36px; text-align:center; }
+.footer-names .thanks { font-family:var(--serif-zh); font-size:12px; line-height:1.9; color:#5a3e2b; }
+.footer-names .amp { font-family:var(--serif-en); font-style:italic; color:var(--gold); margin:8px 0; }
+.fnames { font-family:var(--serif-zh); font-size:13px; color:var(--ink); letter-spacing:0.06em; }
+.fnames .en { font-family:var(--serif-en); font-size:10px; color:var(--ink-soft); }
+.venue-mini { margin-top:12px; font-size:12px; color:var(--ink-soft); }
+.en-quote { font-family:var(--serif-en); font-style:italic; font-size:12px; color:var(--ink-soft); margin-top:18px; letter-spacing:0.04em; }
+.date-zh { font-family:var(--serif-zh); font-size:16px; color:#6b3e2e; letter-spacing:0.08em; }
+.lunar { font-family:var(--serif-zh); font-size:13px; color:var(--ink-soft); margin-top:4px; }
 .dresscode .zh { display: block; }
 .dresscode .en { display: block; font-style: italic; font-size: 12px; margin-top: 2px; }
 
@@ -160,6 +244,7 @@ h2 small {
 .grid img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.25s ease; }
 .grid button:hover img { transform: scale(1.04); }
 
+#lightbox[hidden] { display: none !important; }
 #lightbox {
   position: fixed; inset: 0; z-index: 60;
   background: rgba(20, 16, 12, 0.92);
