@@ -97,16 +97,49 @@ async function handleRsvp(req: Request, env: Env): Promise<Response> {
   return json({ ok: true });
 }
 
+async function keysMatch(candidate: string | null, secret: string): Promise<boolean> {
+  if (!candidate) return false;
+  const enc = new TextEncoder();
+  const [a, b] = await Promise.all([
+    crypto.subtle.digest("SHA-256", enc.encode(candidate)),
+    crypto.subtle.digest("SHA-256", enc.encode(secret)),
+  ]);
+  return crypto.subtle.timingSafeEqual(a, b);
+}
+
+async function handleList(req: Request, env: Env): Promise<Response> {
+  if (!(await keysMatch(req.headers.get("x-admin-key"), env.ADMIN_KEY))) {
+    return json({ ok: false, error: "unauthorized" }, 401);
+  }
+  const { results } = await env.DB.prepare(
+    "SELECT id, name, attending, guests, phone, instagram, message, created_at FROM rsvps ORDER BY id DESC LIMIT 500"
+  ).all();
+  return json({ ok: true, rsvps: results });
+}
+
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
     const url = new URL(req.url);
-    if (url.pathname === "/api/rsvp" && req.method === "POST") {
+    const path = url.pathname;
+
+    if (path === "/api/rsvp") {
+      if (req.method !== "POST") return json({ ok: false, error: "method_not_allowed" }, 405);
       try {
         return await handleRsvp(req, env);
       } catch {
         return json({ ok: false, error: "server_error" }, 500);
       }
     }
+
+    if (path === "/api/rsvps") {
+      if (req.method !== "GET") return json({ ok: false, error: "method_not_allowed" }, 405);
+      try {
+        return await handleList(req, env);
+      } catch {
+        return json({ ok: false, error: "server_error" }, 500);
+      }
+    }
+
     return json({ ok: false, error: "not_found" }, 404);
   },
 };
