@@ -1,0 +1,23 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "wedding-invite-test",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-22",
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "invite",
+      "database_id": "PLACEHOLDER_REPLACE_AT_DEPLOY",
+      "migrations_dir": "migrations"
+    }
+  ]
+}
