@@ -3,6 +3,7 @@
   "name": "wedding-invite-test",
   "main": "src/index.ts",
   "compatibility_date": "2026-08-22",
+  "account_id": "959964199031cc8596d57f3f940800a8",
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1
@@ -16,7 +17,7 @@
     {
       "binding": "DB",
       "database_name": "invite",
-      "database_id": "PLACEHOLDER_REPLACE_AT_DEPLOY",
+      "database_id": "0a96e4f3-3d0b-479e-b241-56b8dfad365a",
       "migrations_dir": "migrations"
     }
   ]
