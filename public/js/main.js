@@ -332,6 +332,30 @@ disc.addEventListener("click", async () => {
   }
 });
 
+/* ---------- envelope (phone App parity) ---------- */
+const envelope = $("#envelope");
+const openBtn = $("#open-btn");
+const envDate = $("#env-date");
+if (envDate && I.couple?.dateLabel) envDate.textContent = I.couple.dateLabel;
+if (envelope) document.body.classList.add("envelope-lock");
+if (envelope && openBtn) {
+  const dismissEnvelope = async () => {
+    envelope.classList.add("hide");
+    document.body.classList.remove("envelope-lock");
+    try { if (!bgm.src) bgm.src = I.musicSrc; await bgm.play(); disc.classList.add("playing"); musicStarted = true; } catch {}
+    setTimeout(() => { window.scrollTo({ top: 0, behavior: "smooth" }); }, 120);
+    let autoTimer = setTimeout(() => {
+      const first = pages[1];
+      if (first) first.scrollIntoView({ behavior: "smooth" });
+    }, 3400);
+    const cancelAuto = () => { clearTimeout(autoTimer); window.removeEventListener("touchstart", cancelAuto); window.removeEventListener("wheel", cancelAuto); };
+    window.addEventListener("touchstart", cancelAuto, { once: true, passive: true });
+    window.addEventListener("wheel", cancelAuto, { once: true, passive: true });
+  };
+  openBtn.addEventListener("click", dismissEnvelope);
+  envelope.addEventListener("click", (e) => { if (e.target === envelope) dismissEnvelope(); });
+}
+
 /* ---------- rsvp form ---------- */
 const form = $("#rsvp-form");
 const guestsSelect = $('select[name="guests"]');

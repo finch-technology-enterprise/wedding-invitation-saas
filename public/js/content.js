@@ -16,14 +16,14 @@ window.INVITE = {
     fullZhB: "陈佩筠",
     fullEnB: "CHAN POOI KUAN",
     tagline: { zh: "【婚礼邀请函】", en: "WELCOME TO OUR WEDDING" },
-    dateLabel: "2025.12.07",
+    dateLabel: "2027.10.09",
     namesLine: { zh: "黄嘉俊 ❤ 陈佩筠", en: "Kar Chun & Pooi Kuan" },
   },
 
-  // keep 2025-12-07 to mirror the original — change if your date differs
-  weddingISO: "2025-12-07T06:30:00+08:00",
-  lunarLabel: "农历十月十八 06:30",
-  weekdayZh: "星期日",
+  // 2027-10-09 is Saturday — weekday is auto-computed from ISO
+  weddingISO: "2027-10-09T10:00:00+08:00",
+  lunarLabel: "10:00",
+  weekdayZh: "星期六",
 
   story: {
     title: { zh: "致亲爱的你们", en: "Dearest" },
@@ -75,7 +75,7 @@ window.INVITE = {
       mapsUrl: "https://maps.google.com/?q=Kuala+Lumpur",
     },
     program: [
-      { time: "06:30", zh: "迎宾入席", en: "Guests arrive" },
+      { time: "10:00", zh: "迎宾入席", en: "Guests arrive" },
       { time: "11:00", zh: "婚礼仪式", en: "Ceremony" },
       { time: "12:30", zh: "婚宴开席", en: "Banquet" },
     ],
@@ -91,11 +91,11 @@ window.INVITE = {
     "assets/photos/photo6.jpg",
   ],
 
-  rsvpDeadlineISO: "2025-11-30T23:59:59+08:00",
+  rsvpDeadlineISO: "2027-09-30T23:59:59+08:00",
 
   rsvpText: {
     title: { zh: "敬盼回复", en: "RSVP" },
-    deadlineLabel: { zh: "请在十一月三十日前回复", en: "Kindly reply by 30 November" },
+    deadlineLabel: { zh: "请在九月三十日前回复", en: "Kindly reply by 30 September" },
     nameLabel: { zh: "姓名", en: "Your name" },
     attendingLabel: { zh: "您会出席吗？", en: "Will you attend?" },
     yes: { zh: "欣然出席", en: "Accept" },

@@ -17,6 +17,19 @@
   </button>
   <audio id="bgm" loop preload="none"></audio>
 
+  <!-- envelope cover — tap to open (phone App view parity) -->
+  <div id="envelope" role="dialog" aria-modal="true" aria-label="open invitation">
+    <div class="env-bg"></div>
+    <div class="env-card">
+      <div class="env-seal">囍</div>
+      <p class="env-names">黄嘉俊 & 陈佩筠</p>
+      <p class="env-title">婚礼邀请函</p>
+      <p class="env-date" id="env-date">2027.10.09</p>
+      <button id="open-btn" type="button" class="env-btn">点击开启 <span aria-hidden="true">✉</span></button>
+      <p class="env-hint">轻触开启 · 音乐与祝福</p>
+    </div>
+  </div>
+
   <main id="pages">
 
     <!-- 1. COVER — silk, arch photo, pill -->
