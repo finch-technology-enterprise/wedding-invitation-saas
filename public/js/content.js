@@ -8,16 +8,16 @@ window.INVITE = {
   musicSrc: "assets/music.mp3",
 
   couple: {
-    zhFirst: "黄",
-    zhSecond: "陈",
+    zhFirst: "李",
+    zhSecond: "刘",
     // full legal names shown in pill & footer — edit here:
-    fullZhA: "黄嘉俊",
-    fullEnA: "WONG KAR CHUN",
-    fullZhB: "陈佩筠",
-    fullEnB: "CHAN POOI KUAN",
+    fullZhA: "李天豪",
+    fullEnA: "LEE THEAN HOW",
+    fullZhB: "刘蔼蕴",
+    fullEnB: "LAW HAI YEUN",
     tagline: { zh: "【婚礼邀请函】", en: "WELCOME TO OUR WEDDING" },
     dateLabel: "2027.10.09",
-    namesLine: { zh: "黄嘉俊 ❤ 陈佩筠", en: "Kar Chun & Pooi Kuan" },
+    namesLine: { zh: "李天豪 ❤ 刘蔼蕴", en: "Thean How & Hai Yeun" },
   },
 
   // 2027-10-09 is Saturday — weekday is auto-computed from ISO
