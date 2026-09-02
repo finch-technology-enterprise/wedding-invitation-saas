@@ -2,199 +2,44 @@
 <html lang="zh">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-  <meta name="theme-color" content="#faf6f0" />
-  <title>Save The Date | 李❤️刘</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#ffffff" />
+  <meta name="description" content="李天豪与刘蔼蕴的婚礼邀请函 · 2027.10.09" />
+  <title>婚礼邀请函 | 李天豪 ❤ 刘蔼蕴</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600&display=swap" />
-  <link rel="stylesheet" href="css/style.css" />
+  <link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500&family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@400;500&display=swap"
+  />
+
+  <link rel="stylesheet" href="css/tokens.css" />
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/canvas.css" />
+  <link rel="stylesheet" href="css/scenes.css" />
 </head>
 <body>
 
-  <!-- floating music disc -->
-  <button id="music-disc" type="button" aria-label="music">
-    <span class="disc-note">♪</span>
-  </button>
   <audio id="bgm" loop preload="none"></audio>
 
-  <!-- envelope cover — tap to open (phone App view parity) -->
-  <div id="envelope" role="dialog" aria-modal="true" aria-label="open invitation">
-    <div class="env-bg"></div>
-    <div class="env-card">
-      <div class="env-seal">囍</div>
-      <p class="env-names">李天豪 & 刘蔼蕴</p>
-      <p class="env-title">婚礼邀请函</p>
-      <p class="env-date" id="env-date">2027.10.09</p>
-      <button id="open-btn" type="button" class="env-btn">点击开启 <span aria-hidden="true">✉</span></button>
-      <p class="env-hint">轻触开启 · 音乐与祝福</p>
-    </div>
+  <!-- The cinematic window. #stage is translated by the timeline. -->
+  <div id="viewport">
+    <main id="stage" aria-label="婚礼邀请函"></main>
+
+    <!-- Music control lives inside the canvas so it stays pinned to the
+         invitation's corner rather than the browser window. -->
+    <button id="music-toggle" type="button" aria-pressed="false" aria-label="播放背景音乐">
+      <svg class="music__icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6Z" />
+      </svg>
+      <span class="music__strike" aria-hidden="true"></span>
+    </button>
   </div>
 
-  <main id="pages">
+  <!-- Screen-reader / assistive announcements for async form state. -->
+  <p id="live-region" class="visually-hidden" role="status" aria-live="polite"></p>
 
-    <!-- 1. COVER — silk, arch photo, pill -->
-    <section class="page" id="cover">
-      <div class="cover-inner">
-        <p class="cover-bracket anim" data-animate="fadeInDown">【婚礼邀请函】</p>
-        <p class="cover-welcome anim" data-animate="fadeInDown" data-delay="120">WELCOME TO OUR WEDDING</p>
-        <p class="cover-date anim" data-animate="fadeInDown" data-delay="220" id="cover-date">2025.12.07</p>
-
-        <div class="arch-wrap anim" data-animate="zoomIn" data-delay="280">
-          <div class="arch-photo" id="arch-photo">
-            <img id="cover-photo" src="assets/photos/photo1.jpg" alt="" loading="eager" onerror="this.style.display='none'" />
-            <div class="arch-fallback" aria-hidden="true"><span>❤</span></div>
-          </div>
-          <div class="pill">
-            <div class="pill-rings" aria-hidden="true">
-              <!-- twin rings svg -->
-              <svg width="44" height="28" viewBox="0 0 44 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="15" cy="16" r="10" stroke="#b08d57" stroke-width="1.3"/>
-                <circle cx="29" cy="16" r="10" stroke="#b08d57" stroke-width="1.3"/>
-                <circle cx="15" cy="7" r="1.7" fill="#c0392b"/><circle cx="29" cy="7" r="1" fill="#c0392b"/><circle cx="22" cy="5" r="0.9" fill="#c0392b"/>
-              </svg>
-            </div>
-            <p class="pill-zh" id="pill-zh-a">李天豪</p>
-            <p class="pill-en" id="pill-en-a">LEE THEAN HOW</p>
-            <p class="pill-amp">&</p>
-            <p class="pill-zh" id="pill-zh-b">刘蔼蕴</p>
-            <p class="pill-en" id="pill-en-b">LAW HAI YEUN</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 2. POEM — "我"被慢慢写成了"我们" -->
-    <section class="page" id="poem">
-      <p class="script anim" data-animate="fadeInDown">Wedding Invitation</p>
-      <h2 class="poem-heading anim" data-animate="fadeInUp" id="poem-heading">“我”被慢慢写成了“我们”</h2>
-      <div class="poem-lines anim" data-animate="fadeInUp" data-delay="140" id="poem-lines"></div>
-      <div class="couple-strip anim" data-animate="zoomIn" data-delay="220">
-        <span class="vlabel vleft">BRIDE<br><small id="vbride">刘蔼蕴</small></span>
-        <div class="couple-photo"><img src="assets/photos/photo2.jpg" alt="" loading="lazy" onerror="this.style.display='none';this.parentElement.classList.add('noimg')" /></div>
-        <span class="vlabel vright">GROOM<br><small id="vgroom">李天豪</small></span>
-      </div>
-    </section>
-
-    <!-- 3. JOURNEY + LETTER -->
-    <section class="page" id="journey">
-      <p class="xi anim" data-animate="fadeInDown">{囍}</p>
-      <h2 class="anim" data-animate="fadeInUp"><span id="journey-title">一场崭新的旅程即将开启</span></h2>
-      <p class="journey-sub anim" data-animate="fadeInUp" data-delay="100" id="journey-sub"></p>
-      <div class="letter anim" data-animate="fadeInUp" data-delay="180" id="letter-lines"></div>
-      <p class="poetic anim" data-animate="fadeInUp" data-delay="260" id="poetic-line">一面湖，一页夏，一丛月亮，一个家</p>
-    </section>
-
-    <!-- 4. COUNTDOWN + CALENDAR -->
-    <section class="page" id="countdown">
-      <p class="script anim" data-animate="fadeInDown"><span class="script-line">Time</span><span class="script-sub">婚礼时间</span></p>
-      <div class="date-block anim" data-animate="fadeInUp">
-        <p id="wedding-date-zh" class="date-zh"></p>
-        <p id="lunar-label" class="lunar"></p>
-      </div>
-      <div class="calendar anim" data-animate="zoomIn" data-delay="120" id="calendar"></div>
-      <div class="clock anim" data-animate="zoomIn" data-delay="180">
-        <div class="unit"><b id="cd-days">--</b><span>天</span><i>Days</i></div>
-        <div class="unit"><b id="cd-hours">--</b><span>时</span><i>Hours</i></div>
-        <div class="unit"><b id="cd-mins">--</b><span>分</span><i>Mins</i></div>
-        <div class="unit"><b id="cd-secs">--</b><span>秒</span><i>Secs</i></div>
-      </div>
-      <p class="en-quote anim" data-animate="fadeIn" data-delay="260">I'm so happy I get to be next to you</p>
-    </section>
-
-    <!-- 5. DETAILS -->
-    <section class="page" id="details">
-      <h2 class="anim" data-animate="fadeInDown"><span data-i18n="detailsTitle.zh"></span><small data-i18n="detailsTitle.en"></small></h2>
-      <div class="venue anim" data-animate="fadeInUp">
-        <p class="venue-name"><span id="venue-zh"></span><span id="venue-en"></span></p>
-        <p class="venue-addr"><span id="addr-zh"></span><span id="addr-en"></span></p>
-      </div>
-      <ul id="program" class="anim" data-animate="fadeInUp" data-delay="120"></ul>
-      <p id="dresscode" class="dresscode anim" data-animate="fadeInUp" data-delay="200"></p>
-      <div class="poem-tail anim" data-animate="fadeInUp" data-delay="240" id="closing-poem"></div>
-      <div class="detail-actions anim" data-animate="fadeInUp" data-delay="300">
-        <a id="maps-link" class="btn" target="_blank" rel="noopener"><span data-i18n="mapBtn.zh"></span><small data-i18n="mapBtn.en"></small></a>
-        <a id="cal-link" class="btn btn-outline"><span data-i18n="calBtn.zh"></span><small data-i18n="calBtn.en"></small></a>
-      </div>
-    </section>
-
-    <!-- 6. GALLERY -->
-    <section class="page page-scrollable" id="gallery">
-      <h2 class="anim" data-animate="fadeInDown"><span data-i18n="galleryTitle.zh"></span><small data-i18n="galleryTitle.en"></small></h2>
-      <div id="gallery-grid" class="grid"></div>
-    </section>
-
-    <!-- 7. RSVP -->
-    <section class="page page-scrollable" id="rsvp">
-      <h2 class="anim" data-animate="fadeInDown"><span data-i18n="rsvp.title.zh"></span><small data-i18n="rsvp.title.en"></small></h2>
-      <p class="deadline anim" data-animate="fadeIn" data-delay="100"><span data-i18n="rsvp.deadlineLabel.zh"></span><span data-i18n="rsvp.deadlineLabel.en"></span></p>
-
-      <form id="rsvp-form" class="anim" data-animate="fadeInUp" data-delay="180" novalidate>
-        <label>
-          <span data-i18n="rsvp.nameLabel.zh"></span><small data-i18n="rsvp.nameLabel.en"></small>
-          <input name="name" type="text" maxlength="80" required autocomplete="name" />
-        </label>
-
-        <fieldset class="attending">
-          <legend><span data-i18n="rsvp.attendingLabel.zh"></span><small data-i18n="rsvp.attendingLabel.en"></small></legend>
-          <label class="radio"><input type="radio" name="attending" value="yes" checked /><span data-i18n="rsvp.yes.zh"></span><small data-i18n="rsvp.yes.en"></small></label>
-          <label class="radio"><input type="radio" name="attending" value="no" /><span data-i18n="rsvp.no.zh"></span><small data-i18n="rsvp.no.en"></small></label>
-        </fieldset>
-
-        <label id="guests-wrap">
-          <span data-i18n="rsvp.guestsLabel.zh"></span><small data-i18n="rsvp.guestsLabel.en"></small>
-          <select name="guests"></select>
-        </label>
-
-        <div class="contact-group">
-          <label>
-            <span data-i18n="rsvp.phoneLabel.zh"></span><small data-i18n="rsvp.phoneLabel.en"></small>
-            <input name="phone" type="tel" inputmode="tel" placeholder="+60123456789" autocomplete="tel" />
-          </label>
-          <label>
-            <span data-i18n="rsvp.instagramLabel.zh"></span><small data-i18n="rsvp.instagramLabel.en"></small>
-            <input name="instagram" type="text" placeholder="@yourname" autocapitalize="off" spellcheck="false" />
-          </label>
-          <p class="hint"><span data-i18n="rsvp.contactHint.zh"></span><span data-i18n="rsvp.contactHint.en"></span></p>
-        </div>
-
-        <label>
-          <span data-i18n="rsvp.messageLabel.zh"></span><small data-i18n="rsvp.messageLabel.en"></small>
-          <textarea name="message" rows="3" maxlength="500"></textarea>
-        </label>
-
-        <label class="hp" aria-hidden="true">Website<input name="website" type="text" tabindex="-1" autocomplete="off" /></label>
-
-        <button type="submit" class="submit-btn"><span data-i18n="rsvp.submit.zh"></span></button>
-        <p id="form-error" class="form-error" hidden></p>
-      </form>
-
-      <div id="rsvp-success" class="success" hidden>
-        <div class="success-heart">❤</div>
-        <h3 data-i18n="rsvp.successTitle.zh"></h3>
-        <p data-i18n="rsvp.successBody.zh"></p>
-        <p data-i18n="rsvp.successBody.en" class="en"></p>
-      </div>
-
-      <div class="footer-names anim" data-animate="fadeInUp" data-delay="260">
-        <p class="thanks">感谢你 / 不远万里 / 为我们祝福<br>婚礼见</p>
-        <p class="amp">&</p>
-        <p class="fnames"><span id="foot-zh-a"></span> <span id="foot-en-a" class="en"></span> & <span id="foot-zh-b"></span> <span id="foot-en-b" class="en"></span></p>
-        <p class="venue-mini" id="foot-venue"></p>
-      </div>
-    </section>
-  </main>
-
-  <!-- page dots -->
-  <nav id="dots" aria-label="pages"></nav>
-
-  <!-- swipe hint arrow -->
-  <div id="swipe-hint"><span></span><i></i></div>
-
-  <!-- lightbox -->
-  <div id="lightbox" hidden><img alt="" /><button type="button" aria-label="close">×</button></div>
-
-  <script src="js/content.js"></script>
-  <script src="js/main.js" type="module"></script>
+  <script type="module" src="js/main.js"></script>
 </body>
 </html>

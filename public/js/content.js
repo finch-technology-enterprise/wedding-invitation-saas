@@ -1,119 +1,187 @@
 // ============================================================
-// EDIT THIS FILE to personalize the invitation.
-// All text is bilingual: zh = Chinese, en = English.
-// Photos go in public/assets/photos/, music in public/assets/music.mp3
+//  EDIT THIS FILE to personalise the invitation.
+//
+//  This is the SINGLE SOURCE OF TRUTH for the wedding.
+//  Nothing here should be duplicated in HTML, CSS or other JS.
+//
+//  `wedding.date` drives:  cover date · Chinese date line · weekday
+//                          calendar · countdown · .ics download
+//
+//  Photography → public/assets/photos/   (see `photos` below)
+//  Music       → public/assets/audio/    (see `music` below)
 // ============================================================
 
-window.INVITE = {
-  musicSrc: "assets/music.mp3",
-
+export const wedding = {
+  // ---------------------------------------------------------
+  // Couple
+  // ---------------------------------------------------------
   couple: {
-    zhFirst: "李",
-    zhSecond: "刘",
-    // full legal names shown in pill & footer — edit here:
-    fullZhA: "李天豪",
-    fullEnA: "LEE THEAN HOW",
-    fullZhB: "刘蔼蕴",
-    fullEnB: "LAW HAI YEUN",
-    tagline: { zh: "【婚礼邀请函】", en: "WELCOME TO OUR WEDDING" },
-    dateLabel: "2027.10.09",
-    namesLine: { zh: "李天豪 ❤ 刘蔼蕴", en: "Thean How & Hai Yeun" },
+    groom: { zh: "李天豪", en: "LEE THEAN HOW" },
+    bride: { zh: "刘蔼蕴", en: "LAW HAI YEUN" },
   },
 
-  // 2027-10-09 is Saturday — weekday is auto-computed from ISO
-  weddingISO: "2027-10-09T10:00:00+08:00",
-  lunarLabel: "10:00",
-  weekdayZh: "星期六",
-
-  story: {
-    title: { zh: "致亲爱的你们", en: "Dearest" },
-    // mirrors original: “我”被慢慢写成了“我们” + poem
-    intro: {
-      heading: { zh: "“我”被慢慢写成了“我们”", en: "\"I\" slowly became \"We\"" },
-      lines: [
-        { zh: "以前觉得婚礼是一则官方公告", en: "" },
-        { zh: "现在才明白", en: "" },
-        { zh: "这是一场为数不多的相聚", en: "" },
-        { zh: "{囍}", en: "" },
-        { zh: "是千里迢迢的奔赴", en: "" },
-        { zh: "是不计得失的支持", en: "" },
-        { zh: "诚邀您携家人参加我们的婚礼", en: "" },
-      ],
-    },
-    journey: {
-      heading: { zh: "一场崭新的旅程即将开启", en: "A new journey begins" },
-      lines: [
-        { zh: "我们结婚啦！", en: "We're getting married!" },
-        { zh: "诚挚邀请您出席我们的婚礼", en: "" },
-        { zh: "见证我们的幸福", en: "" },
-      ],
-    },
-    letter: {
-      lines: [
-        { zh: "你们是我们成长路上最温暖的人", en: "" },
-        { zh: "也是我们人生中最重要的部分", en: "" },
-        { zh: "当你收到这封邀请函，", en: "" },
-        { zh: "我们已经在倒数着日子", en: "" },
-        { zh: "期待着与你们的相见", en: "" },
-        { zh: "在我们最重要的这一天", en: "" },
-      ],
-    },
-    closingPoem: [
-      { zh: "一起追逐人间理想", en: "" },
-      { zh: "一起感受星河滚烫", en: "" },
-      { zh: "我们的感情很好概括", en: "" },
-      { zh: "未来是你", en: "" },
-    ],
+  // ---------------------------------------------------------
+  // Date & time — ISO 8601 with explicit offset.
+  // Everything date-related is derived from this one value.
+  // ---------------------------------------------------------
+  date: {
+    iso: "2027-10-09T11:00:00+08:00",
+    // Displayed beneath 婚礼时间. Traditional Chinese lunar date is not
+    // computable without a lunar table, so it is authored here.
+    // Leave "" to omit the lunar line entirely.
+    lunar: "农历九月初十",
+    // Ceremony start shown next to the date line.
+    timeLabel: "11:00",
+    // Duration used when generating the .ics calendar file.
+    durationHours: 4,
   },
 
-  details: {
+  // ---------------------------------------------------------
+  // Music
+  //
+  // Drop an MP3/M4A at the path below and it plays automatically
+  // (subject to browser autoplay policy). If the file is absent the
+  // control renders in its muted state and nothing errors.
+  // ---------------------------------------------------------
+  music: {
+    src: "assets/audio/theme.m4a",
+    title: "婚礼背景音乐",
+  },
+
+  // ---------------------------------------------------------
+  // Photography slots
+  //
+  // Each slot has a fixed aspect ratio so the composition holds its
+  // shape whether or not the photograph has been supplied yet.
+  // Drop a file at `src` and it appears — no layout code changes.
+  // ---------------------------------------------------------
+  photos: {
+    hero: { src: "assets/photos/hero.jpg", ratio: "825 / 1000", alt: "李天豪与刘蔼蕴的婚纱照" },
+    portrait: { src: "assets/photos/portrait.jpg", ratio: "666 / 1000", alt: "李天豪与刘蔼蕴合影" },
+    story: { src: "assets/photos/story.jpg", ratio: "1 / 1", alt: "李天豪与刘蔼蕴的合照" },
+    landscape: { src: "assets/photos/landscape.jpg", ratio: "1418 / 1000", alt: "李天豪与刘蔼蕴的婚纱外景" },
+    venue: { src: "assets/photos/venue.jpg", ratio: "1110 / 1000", alt: "婚礼场地" },
+    closing: { src: "assets/photos/closing.jpg", ratio: "1 / 1", alt: "李天豪与刘蔼蕴" },
+  },
+
+  // ---------------------------------------------------------
+  // Copy — Chinese is primary. English appears only where the
+  // reference uses it: decorative captions and the couple's names.
+  // ---------------------------------------------------------
+  copy: {
+    cover: {
+      bracket: "【婚礼邀请函】",
+      welcome: "WELCOME TO OUR WEDDING",
+    },
+
+    poem: {
+      heading: "“我”被慢慢写成了“我们”",
+      lines: [
+        "以前觉得婚礼是一则官方公告",
+        "现在才明白",
+        "这是一场为数不多的相聚",
+      ],
+      motif: "{囍}",
+      after: [
+        "是千里迢迢的奔赴",
+        "是不计得失的支持",
+        "诚邀您携家人参加我们的婚礼",
+      ],
+    },
+
+    portrait: {
+      brideLabel: "新娘",
+      groomLabel: "新郎",
+    },
+
+    story: {
+      heading: "一场崭新的旅程\n即将开启",
+      announce: "我们结婚啦！",
+      badge: "婚礼邀请函",
+      invite: "诚挚邀请您出席我们的婚礼\n见证我们的幸福",
+      letter: [
+        "你们是我们成长路上最温暖的人",
+        "也是我们人生中最重要的部分",
+        "当你收到这封邀请函，",
+        "我们已经在倒数着日子",
+        "期待着与你们的相见",
+        "在我们最重要的这一天",
+      ],
+      caption: "一面湖，一页夏，一丛月亮，一个家",
+    },
+
+    time: {
+      heading: "婚礼时间",
+      quote: "I'm so happy I get to be next to you",
+    },
+
     venue: {
-      nameZh: "婚礼地点 待公布",
-      nameEn: "Venue TBA",
-      addressZh: "详细地址待公布",
-      addressEn: "Address TBA",
-      mapsUrl: "https://maps.google.com/?q=Kuala+Lumpur",
+      heading: "婚礼地点",
+      tbaName: "地点待公布",
+      tbaNote: "确定后将另行通知",
+      mapLabel: "查看地图",
+      calendarLabel: "加入日历",
     },
-    program: [
-      { time: "10:00", zh: "迎宾入席", en: "Guests arrive" },
-      { time: "11:00", zh: "婚礼仪式", en: "Ceremony" },
-      { time: "12:30", zh: "婚宴开席", en: "Banquet" },
-    ],
-    dressCode: { zh: "着装：喜庆色系", en: "Dress code: festive colors" },
+
+    closing: {
+      poem: [
+        "一起追逐人间理想",
+        "一起感受星河滚烫",
+        "我们的感情很好概括",
+        "未来是你",
+      ],
+      thanks: "感谢你 / 不远万里 / 为我们祝福",
+      thanksLine2: "婚礼见",
+    },
+
+    rsvp: {
+      heading: "敬盼回复",
+      deadlineLabel: "请在 2027 年 9 月 30 日前回复",
+      name: "姓名",
+      attending: "是否出席",
+      yes: "欣然出席",
+      no: "遗憾缺席",
+      guests: "出席人数",
+      optionalToggle: "＋ 留下联系方式或祝福",
+      optionalToggleOpen: "－ 收起",
+      phone: "电话号码",
+      instagram: "Instagram",
+      contactHint: "电话与 Instagram 至少填写一项",
+      message: "祝福留言",
+      submit: "提 交",
+      submitting: "提交中…",
+      successTitle: "收到啦",
+      successBody: "感谢你的祝福，婚礼见。",
+      errors: {
+        name: "请填写姓名",
+        contact: "请留下电话或 Instagram，方便我们联系你",
+        network: "提交失败，请检查网络后再试一次",
+        server: "出了点问题，请稍后再试",
+      },
+    },
   },
 
-  photos: [
-    "assets/photos/photo1.jpg",
-    "assets/photos/photo2.jpg",
-    "assets/photos/photo3.jpg",
-    "assets/photos/photo4.jpg",
-    "assets/photos/photo5.jpg",
-    "assets/photos/photo6.jpg",
-  ],
+  // ---------------------------------------------------------
+  // Venue
+  //
+  // While `tba` is true the venue scene shows a graceful
+  // "to be announced" treatment. Fill in name/address and set
+  // tba: false when the venue is confirmed.
+  // ---------------------------------------------------------
+  venue: {
+    tba: true,
+    name: "",
+    address: "",
+    mapsUrl: "",
+  },
 
-  rsvpDeadlineISO: "2027-09-30T23:59:59+08:00",
-
-  rsvpText: {
-    title: { zh: "敬盼回复", en: "RSVP" },
-    deadlineLabel: { zh: "请在九月三十日前回复", en: "Kindly reply by 30 September" },
-    nameLabel: { zh: "姓名", en: "Your name" },
-    attendingLabel: { zh: "您会出席吗？", en: "Will you attend?" },
-    yes: { zh: "欣然出席", en: "Accept" },
-    no: { zh: "遗憾缺席", en: "Decline" },
-    guestsLabel: { zh: "出席人数", en: "Guests" },
-    phoneLabel: { zh: "电话号码", en: "Phone" },
-    instagramLabel: { zh: "Instagram", en: "Instagram" },
-    contactHint: { zh: "请至少填写一项", en: "At least one required" },
-    messageLabel: { zh: "祝福留言（可选）", en: "Message (optional)" },
-    submit: { zh: "提交", en: "Submit" },
-    successTitle: { zh: "收到啦！", en: "Thank you!" },
-    successBody: {
-      zh: "感谢你 / 不远万里 / 为我们祝福 — 婚礼见",
-      en: "Thank you for blessing us — see you at the wedding!",
-    },
-    errorBody: {
-      zh: "出了点问题，请稍后再试。",
-      en: "Something went wrong. Please try again.",
-    },
+  // ---------------------------------------------------------
+  // RSVP
+  // ---------------------------------------------------------
+  rsvp: {
+    deadlineISO: "2027-09-30T23:59:59+08:00",
+    maxGuests: 12,
   },
 };
+
+export default wedding;

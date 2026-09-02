@@ -1,0 +1,103 @@
+/* ============================================================
+   Design tokens
+
+   Colours are taken from computed styles measured on the
+   reference invitation. There is deliberately no gold and no
+   cream: the reference sits on white with warm-brown ink.
+
+   Sizing is expressed in rem. The root font-size is set to
+   viewportWidth / 10 (see canvas.css + main.js), so 1rem is
+   always one tenth of the canvas width and every dimension
+   scales proportionally across phone widths.
+   ============================================================ */
+
+:root {
+  /* ---- Surface ---- */
+  --background: #ffffff;
+  --stage-surround: #ece7e2;
+
+  /* ---- Ink ---- */
+  --text-primary: #734b3b;
+  --text-neutral: #1a1a1a;
+  --text-muted: #9a8577;
+
+  --heading-primary: #7e3737;
+  --heading-deep: #5b2424;
+  --cover-title: #713b19;
+
+  /* ---- Motif ---- */
+  --motif-red: #b00808;
+
+  /* ---- Calendar ---- */
+  --calendar-red: #8c0909;
+  --calendar-ink: #896553;
+  --calendar-day: #666666;
+
+  /* ---- Form ---- */
+  --input-border: #999999;
+  --input-text: #6e6e6e;
+  --input-bg: #ffffff;
+  --button-bg: #734b3b;
+  --button-ink: #ffffff;
+  --error: #b00808;
+
+  /* ---- Rule / ornament ---- */
+  --rule: rgba(115, 75, 59, 0.28);
+  --rule-soft: rgba(115, 75, 59, 0.14);
+
+  /* ---- Typography ----
+     Chinese editorial serif. Noto Serif SC/TC are the open
+     equivalents of the reference's Source Han Serif face. */
+  --font-serif-zh: "Noto Serif SC", "Noto Serif TC", "Songti SC", "Songti TC",
+    "STSong", "SimSun", serif;
+  /* Latin display — Cinzel, as used by the reference, via Google Fonts. */
+  --font-display-en: "Cinzel", "Times New Roman", serif;
+  /* Calligraphic accent for the couple's names. Ma Shan Zheng is an
+     open Google Fonts brush face; it stands in for the reference's
+     proprietary 文鼎PL简中楷. Falls back to a strong serif. */
+  --font-script-zh: "Ma Shan Zheng", var(--font-serif-zh);
+  /* Form controls only — matches the reference's UI-font treatment. */
+  --font-ui: -apple-system, BlinkMacSystemFont, "PingFang SC",
+    "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+
+  /* ---- Type scale (rem, = 1/10 canvas width) ----
+     Reference sizes at 390px ÷ 39 give these rem values. */
+  --fs-cover-title: 0.64rem; /* 24.96px @390 */
+  --fs-cover-latin: 0.48rem; /* 18.72px */
+  --fs-cover-date: 0.533rem; /* 20.80px */
+  --fs-name-zh: 0.507rem; /* 19.76px */
+  --fs-name-en: 0.4rem; /* 15.60px */
+  --fs-heading: 0.533rem; /* 20.80px */
+  --fs-heading-sm: 0.48rem; /* 18.72px */
+  --fs-body: 0.4rem; /* 15.60px */
+  --fs-body-lg: 0.427rem; /* 16.64px */
+  --fs-body-sm: 0.373rem; /* 14.56px */
+  --fs-caption: 0.32rem; /* 12.48px */
+  --fs-micro: 0.347rem; /* 13.52px */
+
+  /* ---- Rhythm ----
+     The reference uses line-heights of exactly 1× or 2×. */
+  --lh-tight: 1;
+  --lh-double: 2;
+
+  --ls-title: 0.0827rem; /* 3.22px @390 */
+  --ls-heading: 0.107rem; /* 4.16px */
+  --ls-loose: 0.0267rem; /* 1.04px */
+
+  /* ---- Form geometry (reference-measured) ----
+     The reference's 41.6px field and 35.4px button are below the 44px
+     touch-target minimum. We keep the reference's proportions but floor
+     both at 44px: the visual weight is unchanged at these sizes while
+     the controls become comfortably tappable. */
+  --field-w: 6.267rem; /* 244.4px @390 */
+  --field-h: max(1.067rem, 44px); /* 41.6px @390, floored at 44 */
+  --submit-h: max(0.907rem, 44px); /* 35.4px @390, floored at 44 */
+  --radius: 0.1067rem; /* 4.16px — the only radius in the design */
+
+  /* ---- Chrome ---- */
+  --music-size: 0.8rem; /* 31.2px @390 */
+  --music-inset: 0.256rem; /* 10px */
+
+  /* ---- Motion ---- */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}

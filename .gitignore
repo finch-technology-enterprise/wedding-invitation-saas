@@ -4,3 +4,8 @@ node_modules/
 worker-configuration.d.ts
 dist/
 .admin-key.local
+.wrangler-dev.log
+.review/
+.playwright-mcp/
+test-results/
+playwright-report/

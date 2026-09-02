@@ -1,0 +1,137 @@
+/* ============================================================
+   Cinematic canvas
+
+   Structure:
+
+     #viewport   fixed window, exactly one screen tall, clips
+     #stage      the long scene, translated vertically by
+                 the timeline controller
+     .scene      a chapter; participates in normal flow so the
+                 canvas height is intrinsic rather than hardcoded
+
+   The document never scrolls. All vertical movement is a
+   translate3d on #stage.
+   ============================================================ */
+
+#viewport {
+  position: fixed;
+  inset: 0;
+  width: 10rem;
+  margin-inline: auto;
+  overflow: hidden;
+  background: var(--background);
+  /* Prevents the browser from taking the drag gesture for itself. */
+  touch-action: pan-x;
+}
+
+/* Desktop: centre a phone-shaped invitation instead of stretching it.
+   Height is clamped to a phone aspect so the composition keeps the
+   proportions it was authored at. */
+@media (min-width: 641px) {
+  #viewport {
+    inset: auto;
+    top: 50%;
+    left: 50%;
+    height: min(calc(100vh - 3rem), 19.5rem);
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0.5rem 1.8rem rgba(60, 40, 30, 0.18);
+  }
+}
+
+#stage {
+  position: relative;
+  width: 10rem;
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+}
+
+/* ---- Scene primitives -------------------------------------- */
+
+.scene {
+  position: relative;
+  width: 10rem;
+  /* Chapters set their own height via padding/content so the
+     canvas measures itself. No magic total height anywhere. */
+}
+
+/* A photograph slot. Holds its aspect ratio whether or not the
+   image has arrived, so composition never shifts. */
+.photo {
+  position: relative;
+  overflow: hidden;
+  background-color: #f2eeea;
+  /* Neutral tonal placeholder — deliberately not a colourful
+     gradient. Reads as unexposed film, not as a broken asset. */
+  background-image: linear-gradient(
+    160deg,
+    #f4f0ec 0%,
+    #e9e2db 55%,
+    #ded4cb 100%
+  );
+}
+
+.photo > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* Fade in on decode so a late-arriving photo does not pop. */
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+.photo > img.is-loaded {
+  opacity: 1;
+}
+
+/* Marker shown only while a slot is unfilled. */
+.photo__pending {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  gap: 0.16rem;
+  text-align: center;
+  color: rgba(115, 75, 59, 0.42);
+  font-family: var(--font-display-en);
+  font-size: 0.28rem;
+  letter-spacing: 0.08rem;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.photo__pending::before {
+  content: "";
+  width: 0.7rem;
+  height: 0.7rem;
+  margin-inline: auto;
+  border: 1px solid rgba(115, 75, 59, 0.3);
+  border-radius: 50%;
+}
+
+.photo.is-filled .photo__pending {
+  display: none;
+}
+
+/* ---- Reveal on approach ------------------------------------
+   Elements lift gently as the timeline brings them into frame.
+   Purely transform/opacity, so it stays on the compositor. */
+
+.reveal {
+  opacity: 0;
+  transform: translate3d(0, 0.32rem, 0);
+  transition: opacity 0.9s var(--ease-out), transform 0.9s var(--ease-out);
+}
+
+.reveal.is-visible {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}

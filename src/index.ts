@@ -12,6 +12,9 @@ type ParseResult = { ok: true; value: RsvpInput } | { ok: false; error: string }
 const PHONE_RE = /^\+?[0-9]{8,15}$/;
 const IG_RE = /^[A-Za-z0-9._]{1,30}$/;
 
+/** Photography slots under /assets/photos/ — see the fetch handler. */
+const PHOTO_SLOT_RE = /^\/assets\/photos\/[A-Za-z0-9_-]+\.(jpg|jpeg|png|webp|avif)$/;
+
 export function parseRsvp(body: unknown): ParseResult {
   if (typeof body !== "object" || body === null || Array.isArray(body)) {
     return { ok: false, error: "invalid_body" };
@@ -63,6 +66,19 @@ export function parseRsvp(body: unknown): ParseResult {
     ok: true,
     value: { name, attending: b.attending as boolean, guests, phone, instagram, message },
   };
+}
+
+/**
+ * Surface the real cause of a 500 in Workers logs without leaking it to the
+ * client. Only the error name/message/stack is logged — never request bodies,
+ * headers or env values, so secrets cannot end up in observability output.
+ */
+function logFailure(route: string, err: unknown): void {
+  const detail =
+    err instanceof Error
+      ? { name: err.name, message: err.message, stack: err.stack }
+      : { name: "NonError", message: String(err) };
+  console.error(`[${route}] unhandled failure`, detail);
 }
 
 function json(data: unknown, status = 200): Response {
@@ -126,7 +142,8 @@ export default {
       if (req.method !== "POST") return json({ ok: false, error: "method_not_allowed" }, 405);
       try {
         return await handleRsvp(req, env);
-      } catch {
+      } catch (err) {
+        logFailure("POST /api/rsvp", err);
         return json({ ok: false, error: "server_error" }, 500);
       }
     }
@@ -135,9 +152,19 @@ export default {
       if (req.method !== "GET") return json({ ok: false, error: "method_not_allowed" }, 405);
       try {
         return await handleList(req, env);
-      } catch {
+      } catch (err) {
+        logFailure("GET /api/rsvps", err);
         return json({ ok: false, error: "server_error" }, 500);
       }
+    }
+
+    // Photography slots are optional by design: the invitation renders a
+    // composed placeholder until a file is supplied. Answer an unfilled
+    // slot with 204 rather than 404 so an incomplete photo set is a
+    // normal state instead of console/network noise for every visitor.
+    if (PHOTO_SLOT_RE.test(path)) {
+      const asset = await env.ASSETS.fetch(req);
+      return asset.status === 404 ? new Response(null, { status: 204 }) : asset;
     }
 
     return json({ ok: false, error: "not_found" }, 404);

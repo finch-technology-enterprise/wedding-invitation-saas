@@ -1,0 +1,1037 @@
+/* ============================================================
+   Scene compositions
+
+   Every dimension is rem so the whole invitation scales with
+   viewport width. Text alignment is deliberately mixed —
+   centred, left and right — to reproduce the reference's
+   editorial rhythm rather than a centred-column website.
+   ============================================================ */
+
+/* ---- Shared type roles ------------------------------------- */
+
+.t-title {
+  font-family: var(--font-serif-zh);
+  font-size: var(--fs-cover-title);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--ls-title);
+  color: var(--cover-title);
+  text-align: center;
+}
+
+.t-latin {
+  font-family: var(--font-display-en);
+  font-size: var(--fs-cover-latin);
+  line-height: var(--lh-tight);
+  color: var(--text-neutral);
+  text-align: center;
+}
+
+.t-date {
+  font-family: var(--font-display-en);
+  font-size: var(--fs-cover-date);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--ls-loose);
+  color: var(--text-neutral);
+  text-align: center;
+}
+
+.t-heading {
+  font-family: var(--font-serif-zh);
+  font-size: var(--fs-heading);
+  line-height: var(--lh-double);
+  letter-spacing: var(--ls-heading);
+  color: var(--heading-primary);
+  text-align: center;
+}
+
+.t-body {
+  font-family: var(--font-serif-zh);
+  font-size: var(--fs-body);
+  line-height: var(--lh-double);
+  color: var(--text-primary);
+  text-align: center;
+}
+
+.t-body-lg {
+  font-size: var(--fs-body-lg);
+}
+
+.t-body-sm {
+  font-size: var(--fs-body-sm);
+}
+
+.t-quote {
+  font-family: var(--font-display-en);
+  font-size: var(--fs-caption);
+  line-height: 1.5;
+  color: var(--text-neutral);
+  text-align: center;
+}
+
+/* ---- Ornaments (CSS/SVG only — no borrowed artwork) --------- */
+
+/* A hairline rule with a small diamond at its centre. */
+.rule {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.24rem;
+  width: 5.2rem;
+  margin: 0 auto;
+}
+
+.rule::before,
+.rule::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(
+    to var(--rule-dir, right),
+    transparent,
+    var(--rule)
+  );
+}
+
+.rule::before {
+  --rule-dir: left;
+}
+
+.rule__gem {
+  width: 0.14rem;
+  height: 0.14rem;
+  background: var(--heading-primary);
+  transform: rotate(45deg);
+  opacity: 0.7;
+}
+
+/* The 囍 seal — a drawn motif, not an image. */
+.seal {
+  display: grid;
+  place-items: center;
+  width: 0.92rem;
+  height: 0.92rem;
+  margin: 0 auto;
+  border: 1px solid var(--motif-red);
+  border-radius: 50%;
+  color: var(--motif-red);
+  font-family: var(--font-serif-zh);
+  font-size: 0.44rem;
+  line-height: 1;
+  /* CJK glyphs carry asymmetric side bearings; centre the box, then
+     nudge the glyph so it sits optically centred inside the ring. */
+  text-indent: 0.02rem;
+}
+
+/* Thin vertical hairline used beside portrait compositions. */
+.vrule {
+  width: 1px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    var(--rule) 22%,
+    var(--rule) 78%,
+    transparent
+  );
+}
+
+/* ============================================================
+   Scene 1 — Cover
+   ============================================================ */
+
+#scene-cover {
+  padding-top: calc(0.72rem + env(safe-area-inset-top));
+  padding-bottom: 0.9rem;
+}
+
+.cover__title {
+  margin-bottom: 0.34rem;
+}
+
+.cover__welcome {
+  margin-bottom: 0.22rem;
+}
+
+.cover__date {
+  margin-bottom: 0.5rem;
+}
+
+/* Full-bleed hero. Deliberately edge-to-edge and un-rounded —
+   the reference lets photography touch the canvas edges. */
+.cover__photo {
+  width: 10rem;
+  aspect-ratio: var(--ratio, 825 / 1000);
+}
+
+/* A soft downward vignette so the following type sits cleanly. */
+.cover__photo::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 22%;
+  background: linear-gradient(to bottom, transparent, var(--background));
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ============================================================
+   Scene 2 — Couple names
+   ============================================================ */
+
+#scene-names {
+  padding: 0.62rem 0 0.78rem;
+}
+
+.names__seal {
+  margin-bottom: 0.46rem;
+}
+
+.names__zh {
+  font-family: var(--font-script-zh);
+  font-size: 0.72rem;
+  line-height: 1.15;
+  color: var(--text-neutral);
+  text-align: center;
+}
+
+.names__en {
+  margin-top: 0.1rem;
+  font-family: var(--font-display-en);
+  font-size: var(--fs-name-en);
+  line-height: var(--lh-tight);
+  letter-spacing: 0.04rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.names__amp {
+  margin: 0.3rem 0;
+  font-family: var(--font-display-en);
+  font-size: 0.42rem;
+  line-height: 1;
+  color: var(--heading-primary);
+  text-align: center;
+}
+
+.names__rule {
+  margin-top: 0.56rem;
+}
+
+/* ============================================================
+   Scene 3 — Poem
+   ============================================================ */
+
+#scene-poem {
+  padding: 0.4rem 0 0.8rem;
+}
+
+.poem__heading {
+  font-family: var(--font-serif-zh);
+  font-size: var(--fs-heading-sm);
+  line-height: var(--lh-double);
+  /* Body-brown, not heading-red — matches the reference, where this
+     line reads as part of the poem rather than as a section title. */
+  color: var(--text-primary);
+  text-align: center;
+}
+
+.poem__lines {
+  margin-top: 0.42rem;
+}
+
+.poem__motif {
+  margin: 0.1rem 0;
+  font-family: var(--font-serif-zh);
+  font-size: var(--fs-body);
+  line-height: var(--lh-double);
+  color: var(--motif-red);
+  text-align: center;
+}
+
+/* ============================================================
+   Scene 4 — Portrait
+   ============================================================ */
+
+#scene-portrait {
+  padding: 0.32rem 0 0.8rem;
+}
+
+.portrait__row {
+  display: grid;
+  /* Asymmetric: the photo sits right of centre, flanked by a
+     vertical label column and a hairline. */
+  grid-template-columns: 1.38rem 5.9rem 1.38rem;
+  justify-content: center;
+  align-items: stretch;
+  gap: 0.32rem;
+}
+
+.portrait__photo {
+  aspect-ratio: var(--ratio, 666 / 1000);
+}
+
+.portrait__side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.24rem;
+}
+
+.portrait__side--start {
+  justify-content: flex-start;
+  padding-top: 0.3rem;
+}
+
+.portrait__side--end {
+  justify-content: flex-end;
+  padding-bottom: 0.3rem;
+}
+
+/* Vertical Chinese text, as the reference does beside portraits. */
+.portrait__label {
+  writing-mode: vertical-rl;
+  font-family: var(--font-serif-zh);
+  font-size: var(--fs-micro);
+  line-height: 1.6;
+  letter-spacing: 0.08rem;
+  color: var(--text-primary);
+}
+
+.portrait__label small {
+  font-size: 0.28rem;
+  color: var(--text-muted);
+}
+
+.portrait__side .vrule {
+  flex: 1;
+  min-height: 1.4rem;
+}
+
+/* ============================================================
+   Scene 5 — Story
+   ============================================================ */
+
+#scene-story {
+  padding: 0.4rem 0 0.8rem;
+}
+
+.story__head {
+  display: grid;
+  grid-template-columns: 0.66rem 1fr;
+  align-items: start;
+  gap: 0.2rem;
+  width: 8.2rem;
+  margin: 0 auto;
+}
+
+.story__mark {
+  width: 0.66rem;
+  height: 0.66rem;
+  display: grid;
+  place-items: center;
+  color: var(--motif-red);
+  font-size: 0.4rem;
+  line-height: 1;
+}
+
+/* Left-aligned heading — the reference breaks from centring here. */
+.story__heading {
+  font-family: var(--font-serif-zh);
+  font-size: 0.453rem;
+  line-height: var(--lh-double);
+  color: var(--text-neutral);
+  text-align: left;
+  white-space: pre-line;
+}
+
+/* …and immediately answers it right-aligned. */
+.story__announce {
+  width: 8.2rem;
+  margin: 0.1rem auto 0;
+  font-family: var(--font-serif-zh);
+  font-size: var(--fs-caption);
+  line-height: var(--lh-double);
+  letter-spacing: var(--ls-loose);
+  color: var(--heading-primary);
+  text-align: right;
+}
+
+.story__photo {
+  width: 2.67rem;
+  margin: 0.62rem auto 0;
+  border-radius: 50%;
+  aspect-ratio: var(--ratio, 1 / 1);
+}
+
+.story__badge {
+  margin-top: 0.34rem;
+  font-family: var(--font-serif-zh);
+  font-size: 0.427rem;
+  line-height: var(--lh-tight);
+  color: var(--text-primary);
+  text-align: center;
+}
+
+.story__badge-rule {
+  margin: 0.2rem auto 0;
+  width: 3.4rem;
+}
+
+.story__invite {
+  margin-top: 0.5rem;
+  font-family: var(--font-serif-zh);
+  font-size: var(--fs-name-zh);
+  line-height: var(--lh-double);
+  color: var(--text-primary);
+  text-align: center;
+  white-space: pre-line;
+}
+
+.story__letter {
+  margin-top: 0.5rem;
+}
+
+.story__caption {
+  margin-top: 0.3rem;
+  font-size: var(--fs-body-sm);
+  color: var(--text-primary);
+  text-align: center;
+}
+
+/* ============================================================
+   Scene 6 — Full-bleed landscape
+   ============================================================ */
+
+#scene-landscape {
+  padding: 0.24rem 0 0.72rem;
+}
+
+.landscape__photo {
+  width: 10rem;
+  aspect-ratio: var(--ratio, 1418 / 1000);
+}
+
+/* ============================================================
+   Scene 7 — Wedding time
+   ============================================================ */
+
+#scene-time {
+  padding: 0.24rem 0 0.8rem;
+}
+
+.time__mark {
+  margin-bottom: 0.24rem;
+  color: var(--motif-red);
+  font-size: 0.42rem;
+  line-height: 1;
+  text-align: center;
+}
+
+.time__date {
+  margin-top: 0.16rem;
+  font-family: var(--font-serif-zh);
+  font-size: var(--fs-body-lg);
+  line-height: var(--lh-double);
+  color: var(--text-primary);
+  text-align: center;
+}
+
+.time__quote {
+  margin-top: 0.5rem;
+}
+
+/* ---- Calendar ----------------------------------------------
+   Square, transparent, hairline separator only. No card. */
+
+.calendar {
+  width: 6.5rem;
+  margin: 0.56rem auto 0;
+  color: var(--calendar-ink);
+}
+
+.calendar__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-bottom: 0.16rem;
+}
+
+.calendar__month {
+  font-family: var(--font-display-en);
+  font-size: 0.62rem;
+  line-height: 1;
+  color: var(--calendar-ink);
+}
+
+.calendar__month span {
+  font-size: 0.36rem;
+}
+
+.calendar__year {
+  font-family: var(--font-display-en);
+  font-size: 0.32rem;
+  letter-spacing: 0.04rem;
+  color: var(--calendar-ink);
+}
+
+.calendar__week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  padding: 0.14rem 0;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+}
+
+.calendar__week span {
+  font-family: var(--font-serif-zh);
+  font-size: 0.28rem;
+  line-height: 1;
+  color: var(--calendar-ink);
+  text-align: center;
+}
+
+.calendar__grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  list-style: none;
+}
+
+.calendar__day {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 0.78rem;
+  font-family: var(--font-display-en);
+  font-size: 0.3rem;
+  line-height: 1;
+  color: var(--calendar-day);
+  text-align: center;
+}
+
+.calendar__day--empty {
+  visibility: hidden;
+}
+
+/* Every day carries a faint heart, as the reference does. Drawn with
+   a relative clip-path so it scales with the rem grid. */
+.calendar__day::after {
+  content: "";
+  position: absolute;
+  bottom: 0.09rem;
+  width: 0.15rem;
+  height: 0.14rem;
+  background: var(--calendar-red);
+  opacity: 0.18;
+  clip-path: polygon(
+    50% 100%,
+    8% 45%,
+    3% 30%,
+    8% 12%,
+    25% 5%,
+    42% 12%,
+    50% 26%,
+    58% 12%,
+    75% 5%,
+    92% 12%,
+    97% 30%,
+    92% 45%
+  );
+}
+
+.calendar__day--wedding {
+  color: var(--calendar-red);
+}
+
+.calendar__day--wedding::after {
+  opacity: 1;
+}
+
+/* The wedding day is ringed rather than filled. */
+.calendar__day--wedding::before {
+  content: "";
+  position: absolute;
+  width: 0.62rem;
+  height: 0.62rem;
+  border: 1px solid var(--calendar-red);
+  border-radius: 50%;
+  opacity: 0.55;
+}
+
+/* ---- Countdown ---------------------------------------------
+   Paired digits that roll. Transparent, brown, no cards. */
+
+.countdown {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.42rem;
+  margin-top: 0.62rem;
+}
+
+.countdown__unit {
+  display: flex;
+  align-items: baseline;
+  gap: 0.06rem;
+}
+
+.countdown__pair {
+  display: flex;
+  gap: 0.04rem;
+}
+
+/* Each digit is a small window; the roll happens inside it. */
+.countdown__digit {
+  position: relative;
+  display: grid;
+  width: 0.42rem;
+  height: 0.56rem;
+  overflow: hidden;
+  font-family: var(--font-display-en);
+  font-size: 0.48rem;
+  line-height: 0.56rem;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.countdown__digit > span {
+  grid-area: 1 / 1;
+}
+
+.countdown__digit .is-out {
+  animation: digit-out 0.24s var(--ease-out) both;
+}
+
+.countdown__digit .is-in {
+  animation: digit-in 0.24s var(--ease-out) both;
+}
+
+@keyframes digit-out {
+  to {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+}
+
+@keyframes digit-in {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+}
+
+.countdown__label {
+  font-family: var(--font-serif-zh);
+  font-size: 0.28rem;
+  line-height: 1;
+  color: var(--text-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .countdown__digit .is-out,
+  .countdown__digit .is-in {
+    animation: none;
+  }
+  .countdown__digit .is-out {
+    display: none;
+  }
+}
+
+/* ---- Understated actions (map / calendar) ------------------- */
+
+.actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 0.56rem;
+}
+
+.action {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.12rem;
+  padding: 0.12rem 0.06rem;
+  font-family: var(--font-serif-zh);
+  font-size: var(--fs-caption);
+  line-height: 1;
+  color: var(--text-primary);
+  text-decoration: none;
+  border-bottom: 1px solid var(--rule);
+  transition: opacity 0.15s ease;
+}
+
+/* Keep the understated visual rule while still offering a 44px target. */
+.action::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: max(44px, 1.13rem);
+  transform: translateY(-50%);
+}
+
+.action:active {
+  opacity: 0.55;
+}
+
+.action svg {
+  width: 0.32rem;
+  height: 0.32rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+}
+
+/* ============================================================
+   Scene 8 — Venue
+   ============================================================ */
+
+#scene-venue {
+  padding: 0.32rem 0 0.8rem;
+}
+
+.venue__photo {
+  width: 10rem;
+  margin-top: 0.5rem;
+  aspect-ratio: var(--ratio, 1110 / 1000);
+}
+
+.venue__name {
+  margin-top: 0.26rem;
+  font-family: var(--font-serif-zh);
+  font-size: var(--fs-body-lg);
+  line-height: var(--lh-double);
+  color: var(--text-primary);
+  text-align: center;
+}
+
+.venue__address {
+  margin-top: 0.06rem;
+  font-family: var(--font-serif-zh);
+  font-size: var(--fs-caption);
+  line-height: 1.8;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* ============================================================
+   Scene 9 — Closing
+   ============================================================ */
+
+#scene-closing {
+  padding: 0.5rem 0 0.8rem;
+}
+
+.closing__poem {
+  font-family: var(--font-serif-zh);
+  font-size: var(--fs-body-lg);
+  line-height: var(--lh-double);
+  color: var(--text-primary);
+  text-align: center;
+}
+
+.closing__thanks {
+  margin-top: 0.7rem;
+  font-family: var(--font-serif-zh);
+  font-size: var(--fs-heading-sm);
+  line-height: var(--lh-double);
+  color: var(--heading-deep);
+  text-align: center;
+}
+
+.closing__names {
+  margin-top: 0.36rem;
+  font-family: var(--font-script-zh);
+  font-size: 0.46rem;
+  line-height: 1.5;
+  color: var(--text-neutral);
+  text-align: center;
+}
+
+/* ============================================================
+   Scene 10 — RSVP
+   ============================================================ */
+
+#scene-rsvp {
+  padding: 0.5rem 0 calc(1.4rem + env(safe-area-inset-bottom));
+}
+
+.rsvp__deadline {
+  margin-top: 0.14rem;
+  font-family: var(--font-serif-zh);
+  font-size: var(--fs-caption);
+  line-height: 1.8;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.rsvp__form {
+  width: var(--field-w);
+  margin: 0.56rem auto 0;
+}
+
+.field {
+  margin-bottom: 0.28rem;
+}
+
+.field__label {
+  display: block;
+  margin-bottom: 0.12rem;
+  font-family: var(--font-serif-zh);
+  font-size: var(--fs-caption);
+  line-height: 1;
+  color: var(--text-primary);
+}
+
+.field__label .req {
+  color: var(--error);
+}
+
+.field__control {
+  width: 100%;
+  height: var(--field-h);
+  padding: 0 0.28rem;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius);
+  font-family: var(--font-ui);
+  font-size: 0.347rem;
+  color: var(--input-text);
+  appearance: none;
+}
+
+.field__control::placeholder {
+  color: #b3b3b3;
+}
+
+.field__control:focus {
+  border-color: var(--text-primary);
+  outline: none;
+}
+
+.field__control[aria-invalid="true"] {
+  border-color: var(--error);
+}
+
+textarea.field__control {
+  height: auto;
+  min-height: 1.9rem;
+  padding: 0.22rem 0.28rem;
+  line-height: 1.7;
+  resize: none;
+}
+
+/* Attendance — two equal segmented choices. */
+.choice {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.22rem;
+}
+
+.choice__option {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: var(--field-h);
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius);
+  font-family: var(--font-serif-zh);
+  font-size: var(--fs-caption);
+  color: var(--input-text);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+/* The native radio is stretched to cover its whole option — including
+   the label's 1px borders — so the entire segment is the hit target
+   rather than a small dot in the middle. */
+.choice__option input {
+  position: absolute;
+  inset: -1px;
+  opacity: 0;
+  width: calc(100% + 2px);
+  height: calc(100% + 2px);
+  margin: 0;
+  cursor: pointer;
+}
+
+.choice__option:has(input:checked) {
+  border-color: var(--button-bg);
+  color: var(--button-bg);
+}
+
+.choice__option:has(input:focus-visible) {
+  outline: 2px solid var(--heading-primary);
+  outline-offset: 2px;
+}
+
+/* Optional details — collapsed by default so the form stays short. */
+.rsvp__more {
+  display: block;
+  width: 100%;
+  /* min-height keeps a comfortable 44px target without inflating the
+     visual weight of what is deliberately a quiet, secondary control. */
+  min-height: max(44px, 1.13rem);
+  padding: 0.14rem 0;
+  margin-bottom: 0.14rem;
+  font-family: var(--font-serif-zh);
+  font-size: var(--fs-caption);
+  line-height: 1;
+  color: var(--text-primary);
+  text-align: center;
+  opacity: 0.8;
+}
+
+.rsvp__optional[hidden] {
+  display: none;
+}
+
+.rsvp__hint {
+  margin: -0.12rem 0 0.28rem;
+  font-family: var(--font-serif-zh);
+  font-size: 0.28rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+/* Honeypot — off-screen, never focusable. */
+.hp {
+  position: absolute !important;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.rsvp__submit {
+  width: 100%;
+  height: var(--submit-h);
+  background: var(--button-bg);
+  color: var(--button-ink);
+  border-radius: var(--radius);
+  font-family: var(--font-serif-zh);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.08rem;
+  transition: opacity 0.15s ease, transform 0.12s var(--ease-out);
+}
+
+.rsvp__submit:active {
+  transform: scale(0.985);
+}
+
+.rsvp__submit[disabled] {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.rsvp__error {
+  margin-top: 0.2rem;
+  font-family: var(--font-serif-zh);
+  font-size: 0.3rem;
+  line-height: 1.6;
+  color: var(--error);
+  text-align: center;
+}
+
+.rsvp__error[hidden] {
+  display: none;
+}
+
+/* Inline success — restrained, replaces the form in place. */
+.rsvp__success {
+  width: var(--field-w);
+  margin: 0.56rem auto 0;
+  text-align: center;
+}
+
+.rsvp__success[hidden] {
+  display: none;
+}
+
+.rsvp__success .seal {
+  margin-bottom: 0.3rem;
+}
+
+.rsvp__success-title {
+  font-family: var(--font-serif-zh);
+  font-size: var(--fs-heading-sm);
+  line-height: var(--lh-double);
+  color: var(--heading-deep);
+}
+
+.rsvp__success-body {
+  margin-top: 0.06rem;
+  font-family: var(--font-serif-zh);
+  font-size: var(--fs-caption);
+  line-height: 1.9;
+  color: var(--text-primary);
+}
+
+/* ============================================================
+   Music control
+   ============================================================ */
+
+/* Positioned inside #viewport (which is the containing block), so it
+   stays pinned to the invitation's own top-right corner at every
+   width — including when the canvas is centred on desktop. */
+#music-toggle {
+  position: absolute;
+  top: calc(var(--music-inset) + env(safe-area-inset-top));
+  right: var(--music-inset);
+  z-index: 103;
+  display: grid;
+  place-items: center;
+  width: var(--music-size);
+  height: var(--music-size);
+  border-radius: 50%;
+  background: rgba(205, 201, 201, 0.77);
+  color: #fff;
+}
+
+/* 44px-equivalent hit area behind a ~31px visual. */
+#music-toggle::before {
+  content: "";
+  position: absolute;
+  width: max(1.13rem, 44px);
+  height: max(1.13rem, 44px);
+}
+
+.music__icon {
+  width: 0.44rem;
+  height: 0.44rem;
+  fill: currentColor;
+}
+
+#music-toggle.is-playing .music__icon {
+  animation: music-spin 4s linear infinite;
+}
+
+@keyframes music-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Diagonal strike shown when muted/stopped. */
+.music__strike {
+  position: absolute;
+  width: 0.62rem;
+  height: 1.5px;
+  background: #fff;
+  border-radius: 1px;
+  rotate: 45deg;
+  transition: opacity 0.2s ease, scale 0.2s var(--ease-out);
+}
+
+#music-toggle.is-playing .music__strike {
+  opacity: 0;
+  scale: 0.4 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #music-toggle.is-playing .music__icon {
+    animation: none;
+  }
+}

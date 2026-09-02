@@ -6,11 +6,14 @@
     "dev": "wrangler dev",
     "test": "vitest run",
     "check": "tsc",
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler deploy",
+    "test:e2e": "playwright test",
+    "test:e2e:update": "playwright test --update-snapshots"
   },
   "devDependencies": {
     "@cloudflare/vitest-plugin": "^1.0.0",
     "@cloudflare/workers-types": "^5.20260822.1",
+    "@playwright/test": "^1.62.1",
     "typescript": "^7.0.2",
     "vitest": "^4.1.11",
     "wrangler": "^4.125.0"

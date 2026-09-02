@@ -11,7 +11,9 @@
   "assets": {
     "directory": "./public",
     "binding": "ASSETS",
-    "run_worker_first": ["/api/*"]
+    // Photo slots go through the Worker so an unsupplied photograph can
+    // answer 204 instead of 404 (see src/index.ts).
+    "run_worker_first": ["/api/*", "/assets/photos/*"]
   },
   "d1_databases": [
     {
