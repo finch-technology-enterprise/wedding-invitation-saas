@@ -20,12 +20,28 @@
 import { Hono } from "hono";
 import { fail, json, ok } from "./lib/respond.js";
 import { deploymentMode } from "./lib/mode.js";
+import { AccessError } from "./lib/authz.js";
+import { auth } from "./routes/auth.js";
 import { handleLegacyList, handleLegacyRsvp, logFailure } from "./routes/legacy.js";
 
-const v1 = new Hono<{ Bindings: Env }>();
+// basePath: the Worker forwards the untouched request, so routes below
+// are matched against the full /api/v1/... path.
+const v1 = new Hono<{ Bindings: Env }>().basePath("/api/v1");
 
-// WS2 owns: auth, tenants, invitations, media, rsvp, platform.
-// Until then the versioned API surface does not exist.
+/**
+ * Authorization failures are thrown, not returned, so a route cannot
+ * forget to check a result. This is the single place they become
+ * responses — and the only place their status codes are decided.
+ */
+v1.onError((err) => {
+  if (err instanceof AccessError) return fail(err.code, err.status);
+  logFailure("api/v1", err);
+  return fail("server_error", 500);
+});
+
+v1.route("/auth", auth);
+
+// WS3+ own: tenants, invitations, media, rsvp, platform.
 v1.all("/*", (c) => fail("not_built", 501));
 
 async function servePlatformAdmin(): Promise<Response> {

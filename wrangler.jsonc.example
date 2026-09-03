@@ -14,7 +14,12 @@
   "vars": {
     // "self_hosted" (default, single-tenant, quotas off) or "hosted"
     // (multi-tenant SaaS, registration + quotas on).
-    "DEPLOYMENT_MODE": "self_hosted"
+    "DEPLOYMENT_MODE": "self_hosted",
+    // PBKDF2-SHA256 iterations for password hashing. 210000 costs ~25ms of
+    // CPU per login, which stays within the Workers free plan's 10ms-CPU
+    // guidance for occasional requests. Raise it (OWASP suggests 600000)
+    // if you are on a paid plan and want more margin.
+    "PASSWORD_ITERATIONS": "210000"
   },
   "assets": {
     "directory": "./public",
