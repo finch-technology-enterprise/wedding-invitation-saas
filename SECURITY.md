@@ -20,6 +20,16 @@ Passwords are hashed with **PBKDF2-HMAC-SHA256** via WebCrypto, salted
 per user, at a cost recorded in the stored hash so it can be raised
 without invalidating anyone.
 
+**Iteration count is capped at 100,000 by the platform.** workerd refuses
+anything higher (`NotSupportedError: iteration counts above 100000 are
+not supported`), so the OWASP recommendation of 600,000 is not reachable
+here. This is a real gap and worth stating plainly: a stolen database
+would be cheaper to attack offline than OWASP guidance intends. The
+compensating controls are per-user salts, a 10-character minimum, and
+rate limiting that makes online guessing impractical. If workerd raises
+the ceiling, `PASSWORD_ITERATIONS` will pick it up without invalidating
+existing hashes, because each hash records its own cost.
+
 The mature options — better-auth, Lucia, bcrypt or argon2 bindings —
 either require `nodejs_compat` plus an ORM and bring their own
 `user`/`session` tables that collide with the tenant schema, or ship

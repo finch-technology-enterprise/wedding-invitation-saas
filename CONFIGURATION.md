@@ -56,14 +56,14 @@ exclusions makes every chunk request go through the Worker for no reason.
 | Variable | Default | Meaning |
 |---|---|---|
 | `DEPLOYMENT_MODE` | `self_hosted` | See above |
-| `PASSWORD_ITERATIONS` | `210000` | PBKDF2-SHA256 cost |
+| `PASSWORD_ITERATIONS` | `100000` | PBKDF2-SHA256 cost (platform maximum) |
 
-**On `PASSWORD_ITERATIONS`:** OWASP's floor for PBKDF2-SHA256 is 600,000,
-which measures around 72 ms of CPU. That is comfortable on a paid Workers
-plan but exceeds the free plan's CPU guidance, which would make
-self-hosting on a free account impractical. 210,000 costs roughly 25 ms
-and is the floor used by widely deployed frameworks. Raise it if you are
-on a paid plan.
+**On `PASSWORD_ITERATIONS`:** 100,000 is a hard platform ceiling, not a
+preference — workerd rejects anything higher with `NotSupportedError`.
+Values above it are clamped rather than passed through, so a deployment
+cannot be configured into a login that fails at runtime. OWASP recommends
+600,000; see SECURITY.md for why that is unreachable and what
+compensates.
 
 Existing password hashes record the cost they were created with, so
 changing this does not invalidate anyone's password.

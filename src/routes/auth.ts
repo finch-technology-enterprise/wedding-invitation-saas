@@ -8,7 +8,7 @@
  */
 
 import { Hono } from "hono";
-import { fail, ok } from "../lib/respond.js";
+import { fail, logFailure, ok } from "../lib/respond.js";
 import { newId } from "../lib/ids.js";
 import { nowMs } from "../lib/time.js";
 import { deploymentMode } from "../lib/mode.js";
@@ -168,9 +168,14 @@ auth.post("/bootstrap", async (c) => {
       displayName: displayNameOf(body.displayName),
       isPlatformAdmin: true,
     });
-  } catch {
-    // Lost the race with a concurrent bootstrap.
-    return fail("already_bootstrapped", 409);
+  } catch (err) {
+    // Only a UNIQUE violation means someone else claimed the instance
+    // first. Reporting every failure as "already bootstrapped" hid a real
+    // fault during the production cutover and made an empty database look
+    // like a claimed one.
+    if (String(err).includes("UNIQUE")) return fail("already_bootstrapped", 409);
+    logFailure("POST /auth/bootstrap", err);
+    return fail("bootstrap_failed", 500);
   }
 
   // Self-hosted instances close registration after the owner claims them.

@@ -83,7 +83,7 @@ describe("password hashing", () => {
     const [algo, digest, iters] = stored.split("$");
     expect(algo).toBe("pbkdf2");
     expect(digest).toBe("sha256");
-    expect(Number(iters)).toBeGreaterThanOrEqual(210_000);
+    expect(Number(iters)).toBeGreaterThanOrEqual(100_000);
   });
 
   test("a malformed or truncated hash never verifies", async () => {
@@ -444,5 +444,29 @@ describe("bootstrap and status", () => {
     const res = await register("late@example.com");
     expect(res.status).toBe(403);
     expect((await body<{ error: string }>(res)).error).toBe("registration_closed");
+  });
+});
+
+describe("platform iteration ceiling", () => {
+  test("never requests more iterations than workerd allows", async () => {
+    // workerd rejects PBKDF2 above 100k with NotSupportedError. Miniflare
+    // does not enforce it, so this is the guard that stops a passing test
+    // suite from shipping a login that 500s in production.
+    const stored = await hashPassword(PASSWORD, {
+      ...env,
+      PASSWORD_ITERATIONS: "600000",
+    } as typeof env);
+
+    const iterations = Number(stored.split("$")[2]);
+    expect(iterations).toBeLessThanOrEqual(100_000);
+    expect(await verifyPassword(PASSWORD, stored)).toBe(true);
+  });
+
+  test("a configured value below the ceiling is honoured", async () => {
+    const stored = await hashPassword(PASSWORD, {
+      ...env,
+      PASSWORD_ITERATIONS: "50000",
+    } as typeof env);
+    expect(Number(stored.split("$")[2])).toBe(50_000);
   });
 });

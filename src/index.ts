@@ -20,7 +20,7 @@
  */
 
 import { Hono } from "hono";
-import { fail, json, ok } from "./lib/respond.js";
+import { fail, json, logFailure, ok } from "./lib/respond.js";
 import { deploymentMode } from "./lib/mode.js";
 import { AccessError } from "./lib/authz.js";
 import { auth } from "./routes/auth.js";
@@ -32,23 +32,6 @@ import { platform } from "./routes/platform.js";
 import { cleanup } from "./routes/cleanup.js";
 import { serveMedia } from "./routes/deliver.js";
 import { serveInvitation, servePreview } from "./routes/invite.js";
-/**
- * Structured failure logging for the versioned API.
- *
- * Deliberately logs the error *type* and not its message. V8 embeds a
- * snippet of the offending input in JSON.parse errors, so logging
- * messages verbatim would put invitation copy — and potentially guest
- * replies — into operational logs on a corrupt row. The stack still
- * identifies where the failure happened, which is what an operator
- * actually needs.
- */
-function logFailure(scope: string, err: unknown): void {
-  if (err instanceof Error) {
-    console.error(scope, err.name, err.stack?.split("\n")[1]?.trim() ?? "");
-  } else {
-    console.error(scope, "non_error_thrown");
-  }
-}
 
 // basePath: the Worker forwards the untouched request, so routes below
 // are matched against the full /api/v1/... path.

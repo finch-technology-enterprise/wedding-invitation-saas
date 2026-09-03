@@ -24,20 +24,37 @@ const SALT_BYTES = 16;
 const KEY_BITS = 256;
 
 /**
- * Iteration count. OWASP's floor for PBKDF2-HMAC-SHA256 is 600k, which
- * measures ~72ms of CPU. That is safe on a paid Workers plan (30s CPU
- * budget) but exceeds the free plan's 10ms budget, which would make the
- * project unusable for self-hosters on free accounts — a stated goal.
+ * Hard platform ceiling.
  *
- * 210k is the floor used by widely deployed frameworks, costs ~25ms, and
- * is overridable so an operator can raise it for their own deployment.
+ * workerd refuses PBKDF2 above 100,000 iterations:
+ *
+ *   NotSupportedError: Pbkdf2 failed: iteration counts above 100000
+ *   are not supported (requested 210000).
+ *
+ * This is enforced in production but NOT by the local Miniflare used in
+ * tests, so a higher value passes every test and then fails on deploy.
+ * Clamping here rather than trusting configuration means a self-hoster
+ * who raises it gets a working login instead of a 500.
  */
-export const DEFAULT_ITERATIONS = 210_000;
+export const MAX_ITERATIONS = 100_000;
+
+/**
+ * Iteration count.
+ *
+ * OWASP recommends 600,000 for PBKDF2-HMAC-SHA256. The platform will not
+ * allow it, so this runs at the ceiling workerd permits and the gap is
+ * documented in SECURITY.md rather than papered over. The compensating
+ * controls are the ones that matter most against offline cracking
+ * anyway: per-user salts, a 10-character minimum, and rate limiting that
+ * makes online guessing impractical.
+ */
+export const DEFAULT_ITERATIONS = MAX_ITERATIONS;
 
 function iterationsFor(env: Env): number {
   const raw = Number(env.PASSWORD_ITERATIONS);
-  if (!Number.isFinite(raw) || raw < 10_000 || raw > 5_000_000) return DEFAULT_ITERATIONS;
-  return Math.floor(raw);
+  if (!Number.isFinite(raw) || raw < 10_000) return DEFAULT_ITERATIONS;
+  // Never hand workerd a value it will reject at runtime.
+  return Math.min(Math.floor(raw), MAX_ITERATIONS);
 }
 
 function toB64(bytes: ArrayBuffer | Uint8Array): string {
