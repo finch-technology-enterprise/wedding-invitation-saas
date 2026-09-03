@@ -18,6 +18,7 @@ import { deploymentMode } from "../lib/mode.js";
 import { isSameOrigin } from "../lib/guard.js";
 import { requirePlatformAdmin } from "../lib/authz.js";
 import { revokeAllSessions } from "../lib/session.js";
+import { SCRYPT_PARAMS } from "../lib/password.js";
 
 export const platform = new Hono<{ Bindings: Env }>();
 
@@ -555,7 +556,7 @@ platform.get("/system", async (c) => {
     mode: deploymentMode(c.env),
     bindings: { d1: d1Healthy, r2: r2Healthy },
     settings: settings.results,
-    passwordIterations: Number(c.env.PASSWORD_ITERATIONS) || 210_000,
+    passwordHashing: `scrypt ln=${SCRYPT_PARAMS.ln} r=${SCRYPT_PARAMS.r} p=${SCRYPT_PARAMS.p}`,
   });
 });
 

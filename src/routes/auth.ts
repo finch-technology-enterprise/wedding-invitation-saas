@@ -12,7 +12,13 @@ import { fail, logFailure, ok } from "../lib/respond.js";
 import { newId } from "../lib/ids.js";
 import { nowMs } from "../lib/time.js";
 import { deploymentMode } from "../lib/mode.js";
-import { dummyVerify, hashPassword, passwordProblem, verifyPassword } from "../lib/password.js";
+import {
+  dummyVerify,
+  hashPassword,
+  passwordProblem,
+  verifyPassword,
+  verifyPasswordDetailed,
+} from "../lib/password.js";
 import {
   clearedCookieHeader,
   cookieName,
@@ -292,10 +298,33 @@ auth.post("/login", async (c) => {
     return fail("invalid_credentials", 401);
   }
 
-  const valid = await verifyPassword(password, row.passwordHash);
+  const { valid, needsUpgrade } = await verifyPasswordDetailed(password, row.passwordHash);
   // A disabled account is reported exactly like a wrong password, so the
   // response cannot be used to enumerate suspended users.
   if (!valid || row.status !== "active") return fail("invalid_credentials", 401);
+
+  /**
+   * Transparent rehash.
+   *
+   * A correct login is the only moment the plaintext is available, so it
+   * is the only moment an old hash can be upgraded. Users written under
+   * PBKDF2 move to scrypt the next time they sign in, with no reset and
+   * no knowledge of their password.
+   *
+   * Deliberately not awaited into the failure path: if the write fails
+   * the user is still authenticated, and the upgrade simply retries on
+   * their next login.
+   */
+  if (needsUpgrade) {
+    try {
+      const upgraded = await hashPassword(password, env);
+      await env.DB.prepare("UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?")
+        .bind(upgraded, nowMs(), row.id)
+        .run();
+    } catch (err) {
+      logFailure("password upgrade", err);
+    }
+  }
 
   await clearRateLimit(env, ipKey);
   if (accountKey) await clearRateLimit(env, accountKey);

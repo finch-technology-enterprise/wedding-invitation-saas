@@ -56,17 +56,12 @@ exclusions makes every chunk request go through the Worker for no reason.
 | Variable | Default | Meaning |
 |---|---|---|
 | `DEPLOYMENT_MODE` | `self_hosted` | See above |
-| `PASSWORD_ITERATIONS` | `100000` | PBKDF2-SHA256 cost (platform maximum) |
 
-**On `PASSWORD_ITERATIONS`:** 100,000 is a hard platform ceiling, not a
-preference — workerd rejects anything higher with `NotSupportedError`.
-Values above it are clamped rather than passed through, so a deployment
-cannot be configured into a login that fails at runtime. OWASP recommends
-600,000; see SECURITY.md for why that is unreachable and what
-compensates.
-
-Existing password hashes record the cost they were created with, so
-changing this does not invalidate anyone's password.
+**On password hashing:** there is no tuning variable. Passwords use
+scrypt at OWASP parameters chosen to fit a Worker isolate's memory limit;
+see SECURITY.md. Each hash records its own parameters, so raising them in
+a future release upgrades users on their next login rather than needing a
+migration.
 
 ---
 

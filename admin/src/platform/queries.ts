@@ -190,7 +190,7 @@ export function useSystem() {
         mode: string;
         bindings: { d1: boolean; r2: boolean };
         settings: Array<{ key: string; value: string }>;
-        passwordIterations: number;
+        passwordHashing: string;
       }>(`${BASE}/system`),
   });
 }

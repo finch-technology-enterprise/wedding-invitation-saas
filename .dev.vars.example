@@ -11,4 +11,3 @@
 
 # PBKDF2-SHA256 iterations for password hashing. Also settable as a plain
 # var in wrangler.jsonc; override here to test a different cost locally.
-# PASSWORD_ITERATIONS=210000

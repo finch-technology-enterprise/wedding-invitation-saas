@@ -6,7 +6,7 @@ export function SystemView() {
   const system = useSystem();
   if (system.isLoading) return <Skeleton height={280} />;
 
-  const { mode, bindings, settings, passwordIterations } = system.data!;
+  const { mode, bindings, settings, passwordHashing } = system.data!;
 
   return (
     <Stack maw={720}>
@@ -41,7 +41,7 @@ export function SystemView() {
             <Text size="xs" c="dimmed">
               Password hashing
             </Text>
-            <Text size="sm">{passwordIterations.toLocaleString()} iterations</Text>
+            <Text size="sm">{passwordHashing}</Text>
           </div>
         </Group>
       </Card>

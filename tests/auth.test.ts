@@ -7,7 +7,7 @@
  */
 import { beforeEach, describe, expect, test } from "vitest";
 import { SELF, env } from "cloudflare:test";
-import { hashPassword, verifyPassword } from "../src/lib/password.js";
+import { hashPassword, verifyPassword, verifyPasswordDetailed } from "../src/lib/password.js";
 
 const ORIGIN = "https://app.example.com";
 const PASSWORD = "correct horse battery";
@@ -78,12 +78,14 @@ describe("password hashing", () => {
     expect(a).not.toBe(b);
   });
 
-  test("the stored format records its own cost parameters", async () => {
+  test("the stored format records its algorithm and parameters", async () => {
     const stored = await hashPassword(PASSWORD, env);
-    const [algo, digest, iters] = stored.split("$");
-    expect(algo).toBe("pbkdf2");
-    expect(digest).toBe("sha256");
-    expect(Number(iters)).toBeGreaterThanOrEqual(100_000);
+    // PHC string format: $scrypt$ln=14,r=8,p=5$<salt>$<hash>
+    expect(stored.startsWith("$scrypt$")).toBe(true);
+    expect(stored).toContain("ln=14");
+    expect(stored).toContain("r=8");
+    expect(stored).toContain("p=5");
+    expect(stored.split("$")).toHaveLength(5);
   });
 
   test("a malformed or truncated hash never verifies", async () => {
@@ -447,26 +449,123 @@ describe("bootstrap and status", () => {
   });
 });
 
-describe("platform iteration ceiling", () => {
-  test("never requests more iterations than workerd allows", async () => {
-    // workerd rejects PBKDF2 above 100k with NotSupportedError. Miniflare
-    // does not enforce it, so this is the guard that stops a passing test
-    // suite from shipping a login that 500s in production.
-    const stored = await hashPassword(PASSWORD, {
-      ...env,
-      PASSWORD_ITERATIONS: "600000",
-    } as typeof env);
+describe("algorithm migration", () => {
+  /** The exact legacy format deployed users' hashes are stored in. */
+  async function legacyPbkdf2Hash(password: string, iterations = 100_000): Promise<string> {
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const key = await crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode(password),
+      "PBKDF2",
+      false,
+      ["deriveBits"]
+    );
+    const bits = await crypto.subtle.deriveBits(
+      { name: "PBKDF2", hash: "SHA-256", salt, iterations },
+      key,
+      256
+    );
+    const b64 = (b: Uint8Array) => btoa(String.fromCharCode(...b));
+    return `pbkdf2$sha256$${iterations}$${b64(salt)}$${b64(new Uint8Array(bits))}`;
+  }
 
-    const iterations = Number(stored.split("$")[2]);
-    expect(iterations).toBeLessThanOrEqual(100_000);
-    expect(await verifyPassword(PASSWORD, stored)).toBe(true);
+  test("an existing PBKDF2 hash still verifies", async () => {
+    const legacy = await legacyPbkdf2Hash(PASSWORD);
+    const result = await verifyPasswordDetailed(PASSWORD, legacy);
+    expect(result.valid).toBe(true);
+    expect(result.needsUpgrade).toBe(true);
   });
 
-  test("a configured value below the ceiling is honoured", async () => {
-    const stored = await hashPassword(PASSWORD, {
-      ...env,
-      PASSWORD_ITERATIONS: "50000",
-    } as typeof env);
-    expect(Number(stored.split("$")[2])).toBe(50_000);
+  test("a wrong password against a legacy hash is refused", async () => {
+    const legacy = await legacyPbkdf2Hash(PASSWORD);
+    expect((await verifyPasswordDetailed("wrong password here", legacy)).valid).toBe(false);
+  });
+
+  test("a current scrypt hash verifies and needs no upgrade", async () => {
+    const stored = await hashPassword(PASSWORD, env);
+    const result = await verifyPasswordDetailed(PASSWORD, stored);
+    expect(result.valid).toBe(true);
+    expect(result.needsUpgrade).toBe(false);
+  });
+
+  test("scrypt with weaker-than-policy parameters earns an upgrade", async () => {
+    // Hand-built at ln=12, below the ln=14 policy.
+    const { scryptSync } = await import("node:crypto");
+    const { serialize } = await import("@phc/format");
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const hash = scryptSync(PASSWORD, Buffer.from(salt), 32, { N: 2 ** 12, r: 8, p: 1 });
+    const weak = serialize({
+      id: "scrypt",
+      params: { ln: 12, r: 8, p: 1 },
+      salt: Buffer.from(salt),
+      hash,
+    });
+
+    const result = await verifyPasswordDetailed(PASSWORD, weak);
+    expect(result.valid).toBe(true);
+    expect(result.needsUpgrade).toBe(true);
+  });
+
+  test("a malformed or unsupported hash never authenticates", async () => {
+    for (const bad of [
+      "",
+      "x",
+      "not-a-phc-string",
+      "$argon2id$v=19$m=65536,t=3,p=4$c2FsdA$aGFzaA",
+      "$scrypt$ln=99,r=8,p=5$c2FsdA$aGFzaA",
+      "pbkdf2$sha256$notanumber$aaaa$bbbb",
+    ]) {
+      const result = await verifyPasswordDetailed(PASSWORD, bad);
+      expect(result.valid, bad).toBe(false);
+    }
+  });
+
+  test("logging in with a legacy hash transparently upgrades it in place", async () => {
+    await register("upgrade@example.com");
+
+    // Rewrite the stored hash to the legacy format, as a pre-migration
+    // production row would be.
+    const legacy = await legacyPbkdf2Hash(PASSWORD);
+    await env.DB.prepare("UPDATE users SET password_hash = ? WHERE email = ?")
+      .bind(legacy, "upgrade@example.com")
+      .run();
+
+    const login = await post("/api/v1/auth/login", {
+      email: "upgrade@example.com",
+      password: PASSWORD,
+    });
+    expect(login.status).toBe(200);
+
+    // The row now holds scrypt, without the user doing anything.
+    const row = await env.DB.prepare("SELECT password_hash AS h FROM users WHERE email = ?")
+      .bind("upgrade@example.com")
+      .first<{ h: string }>();
+    expect(row!.h.startsWith("$scrypt$")).toBe(true);
+
+    // And the upgraded hash still accepts the same password.
+    const again = await post("/api/v1/auth/login", {
+      email: "upgrade@example.com",
+      password: PASSWORD,
+    });
+    expect(again.status).toBe(200);
+  });
+
+  test("a failed login against a legacy hash does not rewrite it", async () => {
+    await register("nowrite@example.com");
+    const legacy = await legacyPbkdf2Hash(PASSWORD);
+    await env.DB.prepare("UPDATE users SET password_hash = ? WHERE email = ?")
+      .bind(legacy, "nowrite@example.com")
+      .run();
+
+    const bad = await post("/api/v1/auth/login", {
+      email: "nowrite@example.com",
+      password: "definitely the wrong one",
+    });
+    expect(bad.status).toBe(401);
+
+    const row = await env.DB.prepare("SELECT password_hash AS h FROM users WHERE email = ?")
+      .bind("nowrite@example.com")
+      .first<{ h: string }>();
+    expect(row!.h).toBe(legacy);
   });
 });

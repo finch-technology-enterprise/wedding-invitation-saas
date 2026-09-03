@@ -63,8 +63,9 @@ rather than letting a long string quietly reflow the design.
 | Admin consoles | React, Vite, Mantine, TanStack Query, React Router |
 | Tests | Vitest (Workers pool) + Playwright |
 
-Authentication is built directly on WebCrypto — PBKDF2-SHA256 with
-opaque server-side sessions in `__Host-` cookies. See
+Authentication is built directly on the platform's crypto primitives —
+scrypt password hashing with opaque server-side sessions in `__Host-`
+cookies. See
 [SECURITY.md](SECURITY.md) for why, and for the tenancy model.
 
 ---
@@ -149,5 +150,9 @@ baselines/            archived frozen-design metrics and screenshots
 
 ## Licence
 
-Not yet chosen. Until one is added, no permissions are granted beyond
-viewing the source.
+[Apache License 2.0](LICENSE).
+
+Chosen over MIT for its explicit patent grant and trademark clause, and
+over AGPL because hosting is not the moat here — wider adoption and
+community themes matter more than compelling hosted forks to publish
+their changes.

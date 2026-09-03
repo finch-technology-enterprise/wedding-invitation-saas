@@ -16,27 +16,47 @@ or exfiltrate real RSVP data while investigating.
 
 ## Authentication
 
-Passwords are hashed with **PBKDF2-HMAC-SHA256** via WebCrypto, salted
-per user, at a cost recorded in the stored hash so it can be raised
-without invalidating anyone.
+Passwords are hashed with **scrypt** (`node:crypto.scryptSync`), salted
+per user, using OWASP-sanctioned parameters:
 
-**Iteration count is capped at 100,000 by the platform.** workerd refuses
-anything higher (`NotSupportedError: iteration counts above 100000 are
-not supported`), so the OWASP recommendation of 600,000 is not reachable
-here. This is a real gap and worth stating plainly: a stolen database
-would be cheaper to attack offline than OWASP guidance intends. The
-compensating controls are per-user salts, a 10-character minimum, and
-rate limiting that makes online guessing impractical. If workerd raises
-the ceiling, `PASSWORD_ITERATIONS` will pick it up without invalidating
-existing hashes, because each hash records its own cost.
+    N = 2^14 (16 MiB), r = 8, p = 5
 
-The mature options — better-auth, Lucia, bcrypt or argon2 bindings —
-either require `nodejs_compat` plus an ORM and bring their own
-`user`/`session` tables that collide with the tenant schema, or ship
-native code that does not run on workerd. PBKDF2 is the one
-OWASP-approved KDF workerd implements natively, so this adds no
-dependency and no compatibility flag. Argon2id would be preferable on
-CPU-hardness grounds if it were available.
+OWASP lists several equivalent scrypt configurations trading memory for
+parallelism. We use the low-memory variant rather than the first-listed
+`N=2^17, r=8, p=1` (128 MiB) deliberately: a Worker isolate has a 128 MiB
+memory limit, and a 128 MiB scratch buffer would sit exactly on that
+boundary and risk OOM under concurrent logins.
+
+Argon2id would be preferable, but workerd does not implement it.
+
+**Historical note.** This project originally used PBKDF2-HMAC-SHA256,
+because it was the only OWASP-approved KDF workerd supported. That
+carried a hard ceiling — workerd rejects PBKDF2 above 100,000 iterations,
+well below OWASP's recommended 600,000. `node:crypto` is now available in
+Workers, so scrypt replaced it: memory-hard, uncapped, and materially
+stronger against GPU and ASIC cracking.
+
+Hashes are stored in **PHC string format** (via `@phc/format`), so the
+algorithm and its parameters travel with each hash:
+
+    $scrypt$ln=14,r=8,p=5$<salt>$<hash>
+
+**Existing users migrate transparently.** A correct login is the only
+moment the plaintext is available, so it is the only moment an old hash
+can be upgraded. PBKDF2 hashes are verified, then silently rewritten as
+scrypt on the next successful sign-in — no reset, no forced rotation, and
+no knowledge of anyone's password. The same mechanism re-hashes scrypt
+entries whose parameters fall below current policy.
+
+A hash written by a future version this build does not understand fails
+closed: authenticating against an algorithm we cannot evaluate would be
+worse than refusing the login.
+
+**Cost.** Roughly 170 ms of wall time per hash on deployed Workers. That
+exceeds the free plan's 10 ms CPU allowance — but so did the PBKDF2
+configuration it replaces (production login measured ~32 ms CPU), so
+self-hosting on a free account was already impractical for authenticated
+use. This is not a new constraint.
 
 **Sessions** are random 256-bit tokens. Only their SHA-256 is stored, so
 a database dump cannot be replayed as live sessions. Revocation is
