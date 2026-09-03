@@ -563,3 +563,83 @@ describe("preview and platform tables", () => {
     expect(row?.c).toBe(2);
   });
 });
+
+describe("query plans use indexes for the hot paths", () => {
+  /** Fails loudly if a documented query degrades to a full scan. */
+  async function plan(sql: string, binds: unknown[] = []): Promise<string> {
+    const stmt = env.DB.prepare(`EXPLAIN QUERY PLAN ${sql}`);
+    const res = binds.length ? await stmt.bind(...binds).all<{ detail: string }>() : await stmt.all<{ detail: string }>();
+    return res.results.map((r) => r.detail).join(" | ");
+  }
+
+  test("public slug lookup is indexed", async () => {
+    const detail = await plan(
+      `SELECT i.id FROM invitations i
+       JOIN invitation_revisions r ON r.id = i.published_revision_id
+       JOIN tenants t ON t.id = i.tenant_id AND t.status = 'active'
+       WHERE i.slug = ? AND i.status = 'published'`,
+      ["x"]
+    );
+    expect(detail).toMatch(/idx_inv_slug|USING (COVERING )?INDEX/i);
+    expect(detail).not.toMatch(/SCAN invitations(?! USING)/i);
+  });
+
+  test("session lookup is by primary key", async () => {
+    const detail = await plan(
+      "SELECT s.id FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.id = ?",
+      ["x"]
+    );
+    expect(detail).not.toMatch(/SCAN sessions(?! USING)/i);
+  });
+
+  test("tenant invitation list is indexed", async () => {
+    const detail = await plan(
+      "SELECT id FROM invitations WHERE tenant_id = ? ORDER BY updated_at DESC LIMIT 10",
+      ["t"]
+    );
+    expect(detail).toMatch(/idx_inv_tenant/i);
+  });
+
+  test("platform inventory sorted by creation avoids a scan and temp sort", async () => {
+    const detail = await plan("SELECT id FROM invitations ORDER BY created_at ASC LIMIT 25");
+    expect(detail).toMatch(/idx_inv_created/i);
+    // A temp B-tree here would mean the operator's default page sorts the
+    // whole table in memory.
+    expect(detail).not.toMatch(/TEMP B-TREE/i);
+  });
+
+  test("platform inventory sorted by storage uses the media index", async () => {
+    const detail = await plan(
+      `SELECT i.id, (SELECT COALESCE(SUM(a.byte_size), 0) FROM media_assets a
+                      WHERE a.invitation_id = i.id) AS storageBytes
+       FROM invitations i ORDER BY storageBytes DESC LIMIT 25`
+    );
+    expect(detail).toMatch(/idx_media/i);
+  });
+
+  test("RSVP response pagination is indexed", async () => {
+    const detail = await plan(
+      `SELECT id FROM rsvp_submissions WHERE invitation_id = ?
+       ORDER BY created_at DESC LIMIT 25`,
+      ["i"]
+    );
+    expect(detail).toMatch(/idx_sub_inv_time/i);
+    expect(detail).not.toMatch(/SCAN rsvp_submissions(?! USING)/i);
+  });
+
+  test("media by invitation is indexed", async () => {
+    const detail = await plan(
+      "SELECT id FROM media_assets WHERE invitation_id = ? ORDER BY created_at DESC",
+      ["i"]
+    );
+    expect(detail).toMatch(/idx_media_inv/i);
+  });
+
+  test("media by storage size is indexed", async () => {
+    const detail = await plan(
+      "SELECT id FROM media_assets WHERE invitation_id = ? ORDER BY byte_size DESC",
+      ["i"]
+    );
+    expect(detail).toMatch(/idx_media_size/i);
+  });
+});

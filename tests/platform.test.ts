@@ -641,3 +641,102 @@ describe("system", () => {
     expect(good.status).toBe(200);
   });
 });
+
+// ------------------------------------------------- WS11 hardening findings
+
+describe("suspension is effective everywhere", () => {
+  test("a suspended tenant's published invitation stops serving", async () => {
+    await publish(alice);
+    expect((await SELF.fetch(`${ORIGIN}/i/${alice.slug}`)).status).toBe(200);
+
+    await req(`/api/v1/platform/tenants/${alice.tenantId}/status`, {
+      method: "POST",
+      headers: { cookie: operator },
+      body: JSON.stringify({ status: "suspended" }),
+    });
+
+    // Suspension must take the invitation offline, not merely lock the
+    // tenant out of the admin.
+    expect((await SELF.fetch(`${ORIGIN}/i/${alice.slug}`)).status).toBe(404);
+
+    await req(`/api/v1/platform/tenants/${alice.tenantId}/status`, {
+      method: "POST",
+      headers: { cookie: operator },
+      body: JSON.stringify({ status: "active" }),
+    });
+    expect((await SELF.fetch(`${ORIGIN}/i/${alice.slug}`)).status).toBe(200);
+  });
+
+  test("a member of a suspended tenant cannot pull draft media", async () => {
+    const assetId = await uploadAsset(alice, jpeg(), "hero");
+
+    // Draft media is visible to its own tenant while active...
+    expect(
+      (await SELF.fetch(`${ORIGIN}/media/${assetId}`, { headers: { cookie: alice.cookie } })).status
+    ).toBe(200);
+
+    await req(`/api/v1/platform/tenants/${alice.tenantId}/status`, {
+      method: "POST",
+      headers: { cookie: operator },
+      body: JSON.stringify({ status: "suspended" }),
+    });
+
+    // ...and not after suspension. This path re-implemented its own
+    // membership check once, which silently skipped the status gate.
+    expect(
+      (await SELF.fetch(`${ORIGIN}/media/${assetId}`, { headers: { cookie: alice.cookie } })).status
+    ).toBe(404);
+  });
+
+  test("a preview link for a suspended tenant stops resolving", async () => {
+    await req(`/api/v1/invitations/${alice.invitationId}/draft`, {
+      method: "PUT",
+      headers: { cookie: alice.cookie },
+      body: JSON.stringify({ config: baseConfig() }),
+    });
+    const { token } = await body(
+      await req(`/api/v1/invitations/${alice.invitationId}/preview`, {
+        method: "POST",
+        headers: { cookie: alice.cookie },
+        body: JSON.stringify({}),
+      })
+    );
+    expect((await SELF.fetch(`${ORIGIN}/preview/${token}`)).status).toBe(200);
+
+    await req(`/api/v1/platform/tenants/${alice.tenantId}/status`, {
+      method: "POST",
+      headers: { cookie: operator },
+      body: JSON.stringify({ status: "suspended" }),
+    });
+    expect((await SELF.fetch(`${ORIGIN}/preview/${token}`)).status).toBe(404);
+  });
+});
+
+describe("allow-lists cannot be escaped via the prototype chain", () => {
+  test("an inherited property is not accepted as a sort order", async () => {
+    for (const sort of ["constructor", "toString", "valueOf", "__proto__"]) {
+      const res = await req(`/api/v1/platform/invitations?sort=${sort}`, {
+        headers: { cookie: operator },
+      });
+      // Falls back to the default ordering rather than splicing a
+      // stringified function into ORDER BY.
+      expect(res.status).toBe(200);
+
+      const tenants = await req(`/api/v1/platform/tenants?sort=${sort}`, {
+        headers: { cookie: operator },
+      });
+      expect(tenants.status).toBe(200);
+    }
+  });
+
+  test("an inherited property is not accepted as a platform setting", async () => {
+    for (const key of ["constructor", "toString", "hasOwnProperty"]) {
+      const res = await req("/api/v1/platform/system/settings", {
+        method: "PUT",
+        headers: { cookie: operator },
+        body: JSON.stringify({ [key]: "x" }),
+      });
+      expect(res.status).toBe(422);
+    }
+  });
+});

@@ -91,6 +91,11 @@ CREATE INDEX idx_inv_tenant ON invitations (tenant_id, updated_at DESC);
 CREATE INDEX idx_inv_slug ON invitations (slug);
 CREATE INDEX idx_inv_status_created ON invitations (status, created_at);
 CREATE INDEX idx_inv_updated ON invitations (updated_at);
+-- The platform inventory's default ordering is unfiltered oldest/newest.
+-- idx_inv_status_created cannot serve that (its leading column is status),
+-- so without this the operator's first page is a full scan plus a temp
+-- B-tree sort.
+CREATE INDEX idx_inv_created ON invitations (created_at);
 
 -- Immutable published snapshots. Append-only: never updated by normal flows.
 -- Drafts live on invitations.draft_json (autosave-safe, no table bloat).

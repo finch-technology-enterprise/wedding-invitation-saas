@@ -79,6 +79,9 @@ function build(row: Row, isPreview: boolean): ResolvedInvitation {
   };
 }
 
+// Joining tenants makes suspension effective on the public surface too:
+// an operator suspending a tenant must take its invitations offline, not
+// merely lock the tenant out of the admin.
 const SELECT = `
   SELECT i.id AS invitationId, i.tenant_id AS tenantId, i.slug, i.title,
          i.theme_id AS themeId, i.published_at AS publishedAt,
@@ -86,6 +89,7 @@ const SELECT = `
          r.media_manifest_json AS mediaManifestJson
   FROM invitations i
   JOIN invitation_revisions r ON r.id = i.published_revision_id
+  JOIN tenants t ON t.id = i.tenant_id AND t.status = 'active'
 `;
 
 /**
@@ -121,6 +125,7 @@ export async function resolvePreviewInvitation(
             i.draft_json AS draftJson, p.id AS tokenId
      FROM preview_tokens p
      JOIN invitations i ON i.id = p.invitation_id
+     JOIN tenants t ON t.id = i.tenant_id AND t.status = 'active'
      WHERE p.token_hash = ? AND p.expires_at > ?`
   )
     .bind(await hashToken(token), nowMs())

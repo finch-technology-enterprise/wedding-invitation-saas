@@ -4,17 +4,18 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
+    "dev:admin": "vite",
+    "build": "npm run build:admin && npm run build:platform",
+    "build:admin": "vite build",
+    "build:platform": "BUILD_TARGET=platform vite build",
+    "typecheck": "tsc --noEmit && tsc -p admin/tsconfig.json",
+    "check": "npm run typecheck",
+    "check:admin": "tsc -p admin/tsconfig.json",
     "test": "vitest run",
-    "check": "tsc",
-    "deploy": "wrangler deploy",
     "test:e2e": "playwright test",
     "test:e2e:update": "playwright test --update-snapshots",
-    "build:admin": "vite build",
-    "dev:admin": "vite",
-    "check:admin": "tsc -p admin/tsconfig.json",
-    "build": "npm run build:admin && npm run build:platform",
     "test:admin": "playwright test -c playwright.admin.config.ts",
-    "build:platform": "BUILD_TARGET=platform vite build"
+    "deploy": "npm run build && wrangler deploy"
   },
   "devDependencies": {
     "@cloudflare/vitest-plugin": "^1.0.0",
@@ -50,7 +51,6 @@
     "hono": "^4.13.5",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "react-router-dom": "^7.18.3",
-    "zod": "^4.5.4"
+    "react-router-dom": "^7.18.3"
   }
 }

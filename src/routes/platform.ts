@@ -188,13 +188,16 @@ platform.post("/users/:userId/revoke-sessions", async (c) => {
 
 // ------------------------------------------------------------------- tenants
 
-const TENANT_SORTS: Record<string, string> = {
+// Object.create(null): a plain literal inherits from Object.prototype, so
+// ?sort=constructor would resolve to a truthy function and slip past the
+// `??` fallback into the ORDER BY clause.
+const TENANT_SORTS: Record<string, string> = Object.assign(Object.create(null), {
   newest: "t.created_at DESC",
   oldest: "t.created_at ASC",
   storage: "storageBytes DESC",
   invitations: "invitationCount DESC",
   responses: "rsvpCount DESC",
-};
+});
 
 platform.get("/tenants", async (c) => {
   const { limit, offset } = paging(c);
@@ -292,7 +295,7 @@ platform.put("/tenants/:tenantId/quota", async (c) => {
 
 // --------------------------------------------------------------- invitations
 
-const INVITATION_SORTS: Record<string, string> = {
+const INVITATION_SORTS: Record<string, string> = Object.assign(Object.create(null), {
   newest: "i.created_at DESC",
   oldest: "i.created_at ASC",
   stale: "i.updated_at ASC",
@@ -300,7 +303,7 @@ const INVITATION_SORTS: Record<string, string> = {
   storage: "storageBytes DESC",
   media: "mediaCount DESC",
   responses: "i.rsvp_count DESC",
-};
+});
 
 /**
  * The platform cleanup inventory.
@@ -567,10 +570,16 @@ platform.put("/system/settings", async (c) => {
   }
 
   // Allow-list: settings drive behaviour, so arbitrary keys are refused.
-  const allowed: Record<string, (v: unknown) => boolean> = {
+  const validators: Record<string, (v: unknown) => boolean> = {
     site_name: (v) => typeof v === "string" && v.length > 0 && v.length <= 80,
     registration_enabled: (v) => typeof v === "boolean",
   };
+  // Null-prototype copy, so a key like `constructor` cannot resolve to an
+  // inherited function and slip past the allow-list.
+  const allowed: Record<string, (v: unknown) => boolean> = Object.assign(
+    Object.create(null),
+    validators
+  );
 
   const statements = [];
   for (const [key, value] of Object.entries(body)) {

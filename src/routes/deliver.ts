@@ -13,7 +13,7 @@
 
 import { fail } from "../lib/respond.js";
 import { isValidId } from "../lib/ids.js";
-import { resolveSession } from "../lib/session.js";
+import { requireTenant } from "../lib/authz.js";
 import { nowMs } from "../lib/time.js";
 import { hashToken } from "../lib/session.js";
 
@@ -86,17 +86,22 @@ async function hasPreviewAccess(
   }
 }
 
-/** Tenant members may view their own draft assets in the admin UI. */
+/**
+ * Tenant members may view their own draft assets in the admin UI.
+ *
+ * Routed through requireTenant rather than a private membership query, so
+ * this path inherits the tenant-status gate. Re-implementing the check
+ * here previously let a member of a *suspended* tenant keep pulling draft
+ * media after every other surface had started refusing them.
+ */
 async function hasTenantAccess(req: Request, env: Env, tenantId: string): Promise<boolean> {
-  const ctx = await resolveSession(req, env);
-  if (!ctx) return false;
-
-  const row = await env.DB.prepare(
-    "SELECT 1 AS hit FROM tenant_members WHERE tenant_id = ? AND user_id = ?"
-  )
-    .bind(tenantId, ctx.user.id)
-    .first<{ hit: number }>();
-  return row !== null;
+  try {
+    await requireTenant(req, env, tenantId);
+    return true;
+  } catch {
+    // Not signed in, not a member, or the tenant is suspended.
+    return false;
+  }
 }
 
 export async function serveMedia(req: Request, env: Env, assetId: string): Promise<Response> {

@@ -27,7 +27,18 @@
     // Worker-first so SPA deep links and dynamic routes are not shadowed by
     // Static Assets. /admin/assets/* is deliberately absent: hashed bundle
     // files should be served directly.
-    "run_worker_first": ["/api/*", "/i/*", "/media/*", "/preview/*", "/admin", "/admin/*", "!/admin/assets/*"]
+    "run_worker_first": [
+      "/api/*",
+      "/i/*",
+      "/media/*",
+      "/preview/*",
+      "/admin",
+      "/admin/*",
+      "!/admin/assets/*",
+      "/platform-admin",
+      "/platform-admin/*",
+      "!/platform-admin/assets/*"
+    ]
   },
   "d1_databases": [
     {

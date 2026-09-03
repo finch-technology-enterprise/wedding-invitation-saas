@@ -1,11 +1,14 @@
-# Local dev secrets. Copy to .dev.vars (gitignored) — never commit real values.
+# Local development secrets. Copy to `.dev.vars` (gitignored).
 #
-# Legacy single-invitation admin key (pre-platform auth; removed in WS2).
-# Kept working until the tenant auth cutover so the frozen invitation's
-# admin viewer keeps functioning during the revamp.
-ADMIN_KEY=change-me-to-a-long-random-string
+# The platform currently needs no secrets to run: authentication uses
+# per-user passwords in D1, and there is no third-party integration.
+# This file exists for the optional tuning values below and as the place
+# to put secrets you add.
+#
+# Anything sensitive belongs here for local dev and in
+# `wrangler secret put NAME` for deployed environments — never in
+# wrangler.jsonc, which is committed by some deployers.
 
-# First-claim bootstrap gate for self-hosted mode (WS2). Optional: when
-# set, /admin setup requires this token; when empty, the first visitor
-# claims the super-admin (only before any user exists).
-BOOTSTRAP_TOKEN=
+# PBKDF2-SHA256 iterations for password hashing. Also settable as a plain
+# var in wrangler.jsonc; override here to test a different cost locally.
+# PASSWORD_ITERATIONS=210000
