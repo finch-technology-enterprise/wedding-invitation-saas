@@ -78,6 +78,11 @@ async function signUp(email: string, slug: string): Promise<Actor> {
     body: JSON.stringify({ email, password: PASSWORD }),
   });
   const cookie = cookieFrom(res);
+  // These suites test tenancy, not the verification gate: mark the
+  // account verified as a completed verification would. Verification
+  // itself is covered in tests/auth.test.ts.
+  await env.DB.prepare("UPDATE users SET email_verified = 1 WHERE email = ?").bind(email).run();
+
   const session = await req("/api/v1/auth/session", { headers: { cookie } });
   const { tenants } = await body(session);
   const tenantId = tenants[0].id;

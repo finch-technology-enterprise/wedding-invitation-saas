@@ -4,6 +4,12 @@ import { Center, Loader } from "@mantine/core";
 
 import { useSession } from "./lib/queries";
 import { AuthScreen } from "./routes/AuthScreen";
+import {
+  ForgotPassword,
+  ResetPassword,
+  VerificationRequired,
+  VerifyEmail,
+} from "./routes/RecoveryScreens";
 import { Shell } from "./components/Shell";
 import { Dashboard } from "./routes/Dashboard";
 import { InvitationList } from "./routes/InvitationList";
@@ -74,9 +80,37 @@ export function App() {
     );
   }
 
+  // Recovery links arrive without a session — someone resetting a
+  // password is signed out by definition — so these routes sit outside
+  // the auth gate.
+  const publicRoutes = (
+    <>
+      <Route path="forgot-password" element={<ForgotPassword />} />
+      <Route path="reset-password" element={<ResetPassword />} />
+      <Route path="verify-email" element={<VerifyEmail />} />
+    </>
+  );
+
   // null means "signed out"; an error means the request itself failed.
   if (!session.data) {
-    return <AuthScreen />;
+    return (
+      <Routes>
+        {publicRoutes}
+        <Route path="*" element={<AuthScreen />} />
+      </Routes>
+    );
+  }
+
+  // A hosted account that has not confirmed its address cannot do tenant
+  // work — the API refuses it — so showing the console would only produce
+  // confusing failures.
+  if (session.data.verificationRequired && !session.data.user.emailVerified) {
+    return (
+      <Routes>
+        {publicRoutes}
+        <Route path="*" element={<VerificationRequired email={session.data.user.email} />} />
+      </Routes>
+    );
   }
 
   // A user with no tenant cannot administer anything. This should not
@@ -89,6 +123,7 @@ export function App() {
   return (
     <Suspense fallback={<RouteFallback />}>
       <Routes>
+        {publicRoutes}
         <Route element={<Shell session={session.data} />}>
           <Route index element={<Dashboard />} />
           <Route path="invitations" element={<InvitationList />} />

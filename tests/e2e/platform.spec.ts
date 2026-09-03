@@ -42,7 +42,30 @@ async function signUp(page: Page): Promise<string> {
   await page.getByLabel("Email").fill(email);
   await page.getByRole("textbox", { name: "Password" }).fill(PASSWORD);
   await page.getByRole("button", { name: /^(create account|create administrator)$/i }).click();
+
+  // Hosted mode requires a confirmed address before tenant work. These
+  // suites test the console, not the verification gate, so the account
+  // is marked verified exactly as a completed confirmation would —
+  // verification itself is covered in tests/recovery.test.ts.
+  const { execFile } = await import("node:child_process");
+  const { promisify } = await import("node:util");
+  await promisify(execFile)(
+    "npx",
+    [
+      "wrangler",
+      "d1",
+      "execute",
+      "invite",
+      "--local",
+      "--command",
+      `UPDATE users SET email_verified = 1 WHERE email = '${email}'`,
+    ],
+    { cwd: process.cwd() }
+  );
+  await page.reload();
+
   await expect(page.getByRole("button", { name: email, exact: false })).toBeVisible();
+
 
   return email;
 }

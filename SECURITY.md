@@ -181,11 +181,28 @@ submissions, answers, preview tokens, media metadata and R2 objects.
 
 ---
 
+## Repository history
+
+Two early commits tracked `wrangler.jsonc` before it was gitignored,
+so the original deployment's Cloudflare account ID and D1 database ID
+appear in git history.
+
+Neither is a credential. They are identifiers — an account ID appears in
+every dashboard URL — and cannot be used without an API token, which has
+never been committed. History was deliberately left intact rather than
+rewritten. No key, token, password or `.dev.vars` file has ever been
+tracked.
+
+Fresh clones are unaffected: `wrangler.jsonc.example` carries only
+`REPLACE_WITH_...` placeholders.
+
 ## Known limitations
 
 - **No MFA.** Password plus session only.
-- **No email verification or password reset.** There is no mail
-  integration, so a forgotten password currently needs operator help.
+- **Password reset and email verification need a mail provider.** Without
+  one configured, self-service recovery is unavailable and a forgotten
+  password needs operator help. Self-hosted mode does not require
+  verification, so an instance without email is otherwise fully usable.
 - **No IP allow-listing** for the operator console.
 - **Rate limiting is per-instance** and keyed on `CF-Connecting-IP`; it
   is a speed bump against credential stuffing, not a defence against a

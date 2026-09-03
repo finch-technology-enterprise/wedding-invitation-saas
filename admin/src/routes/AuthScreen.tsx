@@ -149,6 +149,11 @@ export function AuthScreen({ noTenant }: { noTenant?: boolean }) {
               <Button type="submit" loading={busy} fullWidth>
                 {bootstrapping ? "Create administrator" : mode === "register" ? "Create account" : "Sign in"}
               </Button>
+              {!bootstrapping && mode === "login" && (
+                <Anchor size="sm" ta="center" href="/admin/forgot-password">
+                  Forgot your password?
+                </Anchor>
+              )}
             </Stack>
           </form>
 

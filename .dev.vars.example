@@ -11,3 +11,21 @@
 
 # PBKDF2-SHA256 iterations for password hashing. Also settable as a plain
 # var in wrangler.jsonc; override here to test a different cost locally.
+
+# --- Transactional email (optional) ---
+#
+# Needed only for password reset and email verification. Without a
+# provider the platform still runs; self-hosted mode does not require
+# verification. See CONFIGURATION.md.
+#
+# Resend. Alternatively add a Cloudflare `send_email` binding in
+# wrangler.jsonc and leave this unset.
+# RESEND_API_KEY=re_your_key_here
+
+# Sender address, and the canonical origin used to build links in
+# emails. PUBLIC_BASE_URL is never derived from the Host header.
+# EMAIL_FROM=noreply@yourdomain.com
+# PUBLIC_BASE_URL=https://your-worker.workers.dev
+
+# Override the per-mode default (hosted: true, self-hosted: false).
+# EMAIL_VERIFICATION_REQUIRED=false

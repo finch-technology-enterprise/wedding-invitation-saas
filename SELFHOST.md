@@ -137,10 +137,25 @@ Read the release notes before upgrading across a major version.
 
 ## Secrets
 
-The platform currently needs none. If you add an integration that does,
-put it in `.dev.vars` locally and use `wrangler secret put NAME` for
-deployed environments. Never put secrets in `wrangler.jsonc` — some
-deployers commit it.
+The platform runs with none. Email is the only optional integration:
+
+```sh
+npx wrangler secret put RESEND_API_KEY   # only if using Resend
+```
+
+Locally, put values in `.dev.vars` (gitignored). Never put secrets in
+`wrangler.jsonc` — some deployers commit it.
+
+## Email (optional)
+
+Without a provider, everything works except password reset and email
+verification. Self-hosted mode does not require verification, so a
+provider-less instance is fully usable — you simply cannot offer
+self-service password recovery.
+
+To enable it, either add a Cloudflare `send_email` binding or set
+`RESEND_API_KEY`, then set `EMAIL_FROM` and `PUBLIC_BASE_URL`. See
+[CONFIGURATION.md](CONFIGURATION.md#transactional-email).
 
 ---
 

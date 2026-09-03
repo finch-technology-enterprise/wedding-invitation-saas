@@ -65,6 +65,55 @@ migration.
 
 ---
 
+## Transactional email
+
+Optional. Password reset and email verification need a provider;
+everything else works without one.
+
+Two are supported, checked in this order:
+
+**Cloudflare Email Service** — add a `send_email` binding. Native to the
+platform, no API key, no dependency. Requires a domain onboarded to Email
+Sending and a paid Workers plan.
+
+```jsonc
+"send_email": [{ "name": "EMAIL" }]
+```
+
+**Resend** — set `RESEND_API_KEY` as a secret. One documented REST call,
+no SDK.
+
+```sh
+npx wrangler secret put RESEND_API_KEY
+```
+
+| Variable | Required | Meaning |
+|---|---|---|
+| `EMAIL_FROM` | with either provider | Sender address |
+| `PUBLIC_BASE_URL` | with either provider | Canonical origin for links |
+| `RESEND_API_KEY` | Resend only | Secret |
+| `EMAIL_VERIFICATION_REQUIRED` | no | `true` / `false`; defaults by mode |
+
+`PUBLIC_BASE_URL` must be set explicitly. Links in emails are **never**
+built from the request's Host header — an attacker who can set it would
+otherwise receive password-reset links pointing at their own domain.
+
+### Verification policy
+
+`EMAIL_VERIFICATION_REQUIRED` defaults to `true` in hosted mode and
+`false` in self-hosted. An unverified hosted user can sign in, see their
+state, resend the email and sign out, but cannot create or change
+anything until they confirm.
+
+A hosted deployment with no provider configured does **not** silently
+disable verification — signups would be stranded. Configure a provider,
+or set `EMAIL_VERIFICATION_REQUIRED=false` deliberately.
+
+Users that existed before verification was added were migrated as
+verified, so nobody is locked out by a feature that postdates them.
+
+---
+
 ## Platform settings
 
 Stored in D1, edited at `/platform-admin` → System.

@@ -32,6 +32,7 @@ export interface SessionUser {
   displayName: string | null;
   isPlatformAdmin: boolean;
   status: string;
+  emailVerified: boolean;
 }
 
 export interface AuthContext {
@@ -126,7 +127,8 @@ export async function resolveSession(req: Request, env: Env): Promise<AuthContex
   const row = await env.DB.prepare(
     `SELECT s.id AS sid, s.expires_at AS expiresAt, s.revoked_at AS revokedAt,
             u.id AS uid, u.email, u.display_name AS displayName,
-            u.is_platform_admin AS isPlatformAdmin, u.status
+            u.is_platform_admin AS isPlatformAdmin, u.status,
+            u.email_verified AS emailVerified
      FROM sessions s
      JOIN users u ON u.id = s.user_id
      WHERE s.id = ?`
@@ -141,6 +143,7 @@ export async function resolveSession(req: Request, env: Env): Promise<AuthContex
       displayName: string | null;
       isPlatformAdmin: number;
       status: string;
+      emailVerified: number;
     }>();
 
   if (!row) return null;
@@ -157,6 +160,7 @@ export async function resolveSession(req: Request, env: Env): Promise<AuthContex
       displayName: row.displayName,
       isPlatformAdmin: row.isPlatformAdmin === 1,
       status: row.status,
+      emailVerified: row.emailVerified === 1,
     },
   };
 }

@@ -35,6 +35,8 @@ export interface SessionResponse {
   ok: true;
   user: SessionUser;
   tenants: TenantSummary[];
+  /** Whether this deployment requires confirmed email addresses. */
+  verificationRequired?: boolean;
 }
 
 /**

@@ -3,29 +3,48 @@
 A cinematic wedding-invitation platform that runs entirely on Cloudflare:
 one Worker, one D1 database, one R2 bucket.
 
-Guests get a slow vertical film — full-bleed photography, Chinese
-typography, a flip countdown and an RSVP form that the canvas parks
-itself on. Couples get an admin console to write it. Operators get an
-inventory and a manual cleanup tool.
+Guests get a slow vertical film — full-bleed photography, a flip countdown
+and an RSVP form the canvas parks itself on. Couples get an admin console
+to write it. Operators get an inventory and a manual cleanup tool.
 
-The public invitation is deliberately **not** a framework app. It is
-plain ES modules with zero runtime dependencies, and the build asserts
-that no admin code can reach it.
+<p align="center">
+  <img src="docs/screenshots/invitation-cover.png" width="240" alt="The opening plate: title and date over a full-bleed photograph" />
+  <img src="docs/screenshots/invitation-time.png" width="240" alt="The wedding-time chapter: calendar grid and flip countdown" />
+  <img src="docs/screenshots/invitation-rsvp.png" width="240" alt="The RSVP form, where the canvas parks itself" />
+</p>
+
+The invitation never scrolls. A fixed one-screen viewport clips a long
+canvas that drifts upward at a fixed reading pace, can be dragged, and
+stops when it reaches the reply form.
+
+**Live example:** [wedding-invite-test.johnlee-my.workers.dev/i/lee-law](https://wedding-invite-test.johnlee-my.workers.dev/i/lee-law)
+
+> A single published invitation, running on the hosted deployment. It is a
+> demonstration, not a service with an availability guarantee, and hosted
+> signup is not open to the public yet. To use this today, self-host it —
+> that path is fully supported and documented.
 
 ---
 
-## Two ways to run it
+## The admin
 
-**Self-hosted.** Clone, point it at your own Cloudflare account, deploy.
-The first person to open `/admin` claims the instance as its
-administrator, after which registration closes. No quotas, no
-dependency on anyone else's infrastructure.
+<p align="center">
+  <img src="docs/screenshots/admin-editor.png" width="600" alt="Invitation editor with manifest-driven fields and inline character limits" />
+</p>
 
-**Hosted.** Open registration, per-tenant quotas, and an operator
-console for whoever runs the service.
+Content editing is driven by the theme manifest, so every field shows the
+limit the server actually enforces. The composition was designed for
+bounded text, and the platform keeps it that way rather than reflowing
+the design around an arbitrarily long string.
 
-Both modes share one schema and one codebase; `DEPLOYMENT_MODE` decides
-which behaviours are active. See [CONFIGURATION.md](CONFIGURATION.md).
+<p align="center">
+  <img src="docs/screenshots/admin-media.png" width="420" alt="Media manager with per-slot aspect ratios and focal-point pickers" />
+  <img src="docs/screenshots/admin-rsvp.png" width="420" alt="Reply form builder with reorderable custom questions" />
+</p>
+
+Media slots preview at the real aspect ratio the invitation uses, and the
+focal-point control picks the `object-position` the theme will apply —
+the original bytes are never re-encoded.
 
 ---
 
@@ -34,39 +53,17 @@ which behaviours are active. See [CONFIGURATION.md](CONFIGURATION.md).
 - **Multiple invitations per workspace**, each with its own public link
 - **Draft → preview → publish**, where publishing is an atomic pointer
   flip onto an immutable revision, so a guest never sees half an edit
-- **Preview links** you can send to a partner — no account required, and
-  scoped to only the media that draft references
-- **Media** uploaded to R2 with immutable keys: replacing a photo mints a
-  new object, so a published invitation keeps the exact bytes it shipped
-- **Focal points** per photo, previewed at the real aspect ratio the
-  invitation uses
+- **Preview links** you can send to a partner — no account needed, scoped
+  to only the media that draft references
+- **Media** in R2 under immutable keys: replacing a photo mints a new
+  object, so a published invitation keeps the exact bytes it shipped
 - **Configurable RSVP** with custom questions, validated against the
-  schema that was published rather than the one currently being edited
+  schema that was published rather than the one being edited
 - **CSV export** with spreadsheet-formula neutralisation
 - **Operator console** for users, workspaces, storage and manual cleanup
 
-Everything a tenant edits is bounded by a theme manifest. The cinematic
-composition was designed for short copy, and the platform enforces that
-rather than letting a long string quietly reflow the design.
-
----
-
-## Stack
-
-| Layer | Choice |
-|---|---|
-| Runtime | Cloudflare Workers (workerd) |
-| Router | Hono |
-| Database | D1 (SQLite) |
-| Object storage | R2 |
-| Public invitation | Plain ES modules, no dependencies |
-| Admin consoles | React, Vite, Mantine, TanStack Query, React Router |
-| Tests | Vitest (Workers pool) + Playwright |
-
-Authentication is built directly on the platform's crypto primitives —
-scrypt password hashing with opaque server-side sessions in `__Host-`
-cookies. See
-[SECURITY.md](SECURITY.md) for why, and for the tenancy model.
+Nothing expires. No cron deletes anything. Invitations persist until
+someone deliberately removes them.
 
 ---
 
@@ -86,11 +83,34 @@ npm run build
 npx wrangler deploy
 ```
 
-Then open `/admin` on your deployed URL and create the first account —
-it becomes the administrator.
+Open `/admin` on your deployed URL and create the first account — it
+becomes the administrator, and registration closes behind it.
 
 Full walkthrough, including local development against a local D1 and R2:
-[SELFHOST.md](SELFHOST.md).
+**[SELFHOST.md](SELFHOST.md)**.
+
+---
+
+## Stack
+
+| Layer | Choice |
+|---|---|
+| Runtime | Cloudflare Workers (workerd) |
+| Router | Hono |
+| Database | D1 (SQLite) |
+| Object storage | R2 |
+| Public invitation | Plain ES modules, **no dependencies** |
+| Admin consoles | React, Vite, Mantine, TanStack Query, React Router |
+| Email | Cloudflare Email Service or Resend, both optional |
+| Tests | Vitest (Workers pool) + Playwright |
+
+The guest-facing invitation ships zero runtime dependencies, and a test
+asserts that no admin framework code can reach it. It is opened once, on
+a phone, often on a poor connection — a framework would cost real
+milliseconds to render a fixed composition.
+
+Authentication is scrypt password hashing with opaque server-side
+sessions in `__Host-` cookies. See **[SECURITY.md](SECURITY.md)**.
 
 ---
 
@@ -99,52 +119,37 @@ Full walkthrough, including local development against a local D1 and R2:
 ```sh
 npm install
 npx wrangler d1 migrations apply invite --local
-npm run build          # both admin consoles
-npm run dev            # wrangler dev on :8787
+npm run build
+npm run dev
 ```
-
-The admin consoles can also run against Vite's dev server with hot
-reload, proxying the API to a local `wrangler dev` on port 8788:
-
-```sh
-npx wrangler dev --port 8788   # terminal 1
-npm run dev:admin              # terminal 2
-```
-
-### Commands
 
 | Command | What it does |
 |---|---|
 | `npm run build` | Builds both admin consoles into `public/` |
-| `npm test` | Worker/API suite against real D1 and R2 (Vitest) |
+| `npm test` | Worker/API suite against real D1 and R2 |
 | `npm run typecheck` | Typechecks the Worker and both consoles |
-| `npm run test:e2e` | Public invitation suite, including visual baselines |
-| `npm run test:admin` | Admin + operator browser suite against a real Worker |
+| `npm run test:e2e` | Public invitation suite, incl. visual baselines |
+| `npm run test:admin` | Admin + operator browser suite |
 | `npm run deploy` | Builds, then deploys |
 
 ### The public invitation is frozen
 
-`public/themes/cinematic-classic/` reproduces an accepted design, and its
-appearance is protected by screenshot baselines at 375/390/430 plus
-desktop. Changes there are expected to be adapter seams, not redesigns.
-If you are adding a theme, add a theme — see [THEMES.md](THEMES.md).
+`public/themes/cinematic-classic/` reproduces an accepted design, guarded
+by screenshot baselines at 375/390/430 plus desktop. Changes there are
+expected to be adapter seams, not redesigns. If you want different
+visuals, add a theme — see **[THEMES.md](THEMES.md)**.
 
 ---
 
-## Repository layout
+## Documentation
 
-```
-src/                  Worker: routes, auth, authz, theme schema
-  lib/                sessions, authorization, validation, R2 keys
-  routes/             API surfaces, one file per domain
-  themes/             server-side theme manifests
-public/themes/        the public invitation (no build step)
-admin/                React consoles (tenant + operator)
-migrations/           D1 schema
-tests/                Vitest suites
-tests/e2e/            Playwright suites and visual baselines
-baselines/            archived frozen-design metrics and screenshots
-```
+| | |
+|---|---|
+| **[SELFHOST.md](SELFHOST.md)** | Deploy it on your own account |
+| **[CONFIGURATION.md](CONFIGURATION.md)** | Modes, bindings, quotas, email |
+| **[THEMES.md](THEMES.md)** | Theme contract and adding Theme #2 |
+| **[SECURITY.md](SECURITY.md)** | Auth, isolation, reporting a vulnerability |
+| **[CONTRIBUTING.md](CONTRIBUTING.md)** | Setup, tests, expectations |
 
 ---
 

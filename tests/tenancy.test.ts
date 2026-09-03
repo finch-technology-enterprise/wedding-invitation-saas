@@ -68,6 +68,11 @@ async function signUp(email: string): Promise<Actor> {
   const cookie = cookieFrom(res);
   const { userId } = await body<{ userId: string }>(res);
 
+  // These suites test tenancy, not the verification gate: mark the
+  // account verified as a completed verification would. Verification
+  // itself is covered in tests/auth.test.ts.
+  await env.DB.prepare("UPDATE users SET email_verified = 1 WHERE email = ?").bind(email).run();
+
   const session = await req("/api/v1/auth/session", { headers: { cookie } });
   const data = await body<{ tenants: Array<{ id: string }> }>(session);
   return { cookie, userId, tenantId: data.tenants[0]!.id };
@@ -297,10 +302,13 @@ describe("IDOR: cross-tenant writes", () => {
     });
     expect(res.status).toBe(404);
 
+    // A new invitation is seeded with neutral starter content, so the
+    // check is that the foreign write did not land — not that the draft
+    // is empty.
     const row = await env.DB.prepare("SELECT draft_json AS d FROM invitations WHERE id = ?")
       .bind(bobInvitation)
-      .first<{ d: string | null }>();
-    expect(row?.d).toBeNull();
+      .first<{ d: string }>();
+    expect(row!.d).not.toContain("Injected");
   });
 
   test("publish across the tenant boundary is refused", async () => {

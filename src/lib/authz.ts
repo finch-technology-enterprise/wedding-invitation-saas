@@ -10,6 +10,7 @@
 
 import type { AuthContext } from "./session.js";
 import { resolveSession } from "./session.js";
+import { verificationRequired } from "./email.js";
 
 export type Role = "owner" | "member";
 
@@ -42,6 +43,24 @@ export async function requirePlatformAdmin(req: Request, env: Env): Promise<Auth
   return ctx;
 }
 
+/**
+ * Unverified-account policy, in one place.
+ *
+ * An unverified hosted user may sign in, see their state, resend the
+ * email and sign out — enough to recover — but may not create or change
+ * anything. Enforcing it inside requireTenant/requireInvitation means
+ * every tenant mutation inherits it; no handler can forget.
+ *
+ * Self-hosted deployments without a mail provider are unaffected:
+ * verificationRequired() is false there, and existing users were
+ * migrated as verified.
+ */
+function requireVerifiedEmail(ctx: AuthContext, env: Env): void {
+  if (!verificationRequired(env)) return;
+  if (ctx.user.emailVerified) return;
+  throw new AccessError("email_not_verified", 403);
+}
+
 export interface TenantAccess {
   auth: AuthContext;
   tenantId: string;
@@ -71,6 +90,7 @@ export async function requireTenant(
 
   if (!row) throw NOT_FOUND;
   if (row.status !== "active") throw new AccessError("tenant_suspended", 403);
+  requireVerifiedEmail(auth, env);
 
   return { auth, tenantId, role: row.role };
 }
@@ -115,6 +135,7 @@ export async function requireInvitation(
 
   if (!row) throw NOT_FOUND;
   if (row.status !== "active") throw new AccessError("tenant_suspended", 403);
+  requireVerifiedEmail(auth, env);
 
   return { auth, tenantId: row.tenantId, role: row.role, invitationId: row.invitationId };
 }

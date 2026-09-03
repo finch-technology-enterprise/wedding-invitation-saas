@@ -99,6 +99,11 @@ async function signUp(email: string, slug: string): Promise<Actor> {
   const cookie = cookieFrom(res);
   const { userId } = await body<{ userId: string }>(res);
 
+  // These suites test tenancy, not the verification gate: mark the
+  // account verified as a completed verification would. Verification
+  // itself is covered in tests/auth.test.ts.
+  await env.DB.prepare("UPDATE users SET email_verified = 1 WHERE email = ?").bind(email).run();
+
   const session = await req("/api/v1/auth/session", { headers: { cookie } });
   const { tenants } = await body<{ tenants: Array<{ id: string }> }>(session);
   const tenantId = tenants[0]!.id;
@@ -169,11 +174,11 @@ describe("draft validation", () => {
     const data = await body<{ errors: Array<{ path: string; code: string }> }>(res);
     expect(data.errors).toContainEqual({ path: "evilKey", code: "unknown_property" });
 
-    // Nothing was stored: a rejected draft must not partially persist.
+    // The rejected value must not persist; the starter seed is untouched.
     const row = await env.DB.prepare("SELECT draft_json AS d FROM invitations WHERE id = ?")
       .bind(alice.invitationId)
-      .first<{ d: string | null }>();
-    expect(row?.d).toBeNull();
+      .first<{ d: string }>();
+    expect(row!.d).not.toContain("evilKey");
   });
 
   test("a misspelled nested property names the exact offending path", async () => {
@@ -362,10 +367,29 @@ describe("media reference validation", () => {
 // ---------------------------------------------------------------- publish
 
 describe("publishing", () => {
-  test("publishing an empty draft is refused", async () => {
+  test("publishing an invitation with no draft at all is refused", async () => {
+    // New invitations carry starter content, so clear it to reach the
+    // genuinely-empty case.
+    await env.DB.prepare("UPDATE invitations SET draft_json = NULL WHERE id = ?")
+      .bind(alice.invitationId)
+      .run();
+
     const res = await doPublish(alice);
     expect(res.status).toBe(409);
     expect((await body<{ error: string }>(res)).error).toBe("nothing_to_publish");
+  });
+
+  test("a newly created invitation is seeded with neutral starter content", async () => {
+    const row = await env.DB.prepare("SELECT draft_json AS d FROM invitations WHERE id = ?")
+      .bind(alice.invitationId)
+      .first<{ d: string }>();
+
+    const config = JSON.parse(row!.d);
+    // Clearly fictional placeholders — never the frozen fixture's couple.
+    expect(config.couple.groom.zh).toBe("Alex");
+    expect(config.couple.bride.zh).toBe("Jamie");
+    expect(row!.d).not.toContain("李天豪");
+    expect(row!.d).not.toContain("刘蔼蕴");
   });
 
   test("initial publish creates a revision and flips the pointer atomically", async () => {

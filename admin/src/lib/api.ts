@@ -151,6 +151,7 @@ export interface SessionUser {
   email: string;
   displayName: string | null;
   isPlatformAdmin: boolean;
+  emailVerified?: boolean;
 }
 
 export interface TenantSummary {

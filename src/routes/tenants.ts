@@ -19,6 +19,7 @@ import {
   requireTenantOwner,
   requireUser,
 } from "../lib/authz.js";
+import { starterConfig } from "../themes/starter.js";
 import {
   parseLimit,
   parseOffset,
@@ -278,13 +279,30 @@ tenants.post("/:tenantId/invitations", async (c) => {
   const id = newId();
   const now = nowMs();
 
+  // Seed neutral placeholder content so a new invitation renders as an
+  // unfinished invitation rather than an empty canvas — and, importantly,
+  // never as the frozen fixture's real couple.
+  const starter = JSON.stringify(starterConfig());
+
   try {
     await c.env.DB.prepare(
       `INSERT INTO invitations
-         (id, tenant_id, title, slug, theme_id, status, created_at, updated_at, created_by)
-       VALUES (?, ?, ?, ?, ?, 'draft', ?, ?, ?)`
+         (id, tenant_id, title, slug, theme_id, status, draft_json, draft_updated_at,
+          created_at, updated_at, created_by)
+       VALUES (?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?)`
     )
-      .bind(id, access.tenantId, title.value, slug.value, theme.value, now, now, access.auth.user.id)
+      .bind(
+        id,
+        access.tenantId,
+        title.value,
+        slug.value,
+        theme.value,
+        starter,
+        now,
+        now,
+        now,
+        access.auth.user.id
+      )
       .run();
   } catch (err) {
     // Slugs are globally unique: report the clash without revealing which

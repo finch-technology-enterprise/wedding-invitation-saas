@@ -31,6 +31,15 @@ import {
   hashToken,
 } from "../lib/session.js";
 import { clearRateLimit, clientIpHash, isSameOrigin, rateLimit } from "../lib/guard.js";
+import { issueToken, redeemToken, revokeTokens, RESET_TTL_MS, VERIFICATION_TTL_MS } from "../lib/authTokens.js";
+import {
+  baseUrl,
+  emailConfigured,
+  passwordResetEmail,
+  sendTransactionalEmail,
+  verificationEmail,
+  verificationRequired,
+} from "../lib/email.js";
 
 export const auth = new Hono<{ Bindings: Env }>();
 
@@ -93,7 +102,13 @@ async function userCount(env: Env): Promise<number> {
  */
 async function createUserWithTenant(
   env: Env,
-  input: { email: string; password: string; displayName: string | null; isPlatformAdmin: boolean }
+  input: {
+    email: string;
+    password: string;
+    displayName: string | null;
+    isPlatformAdmin: boolean;
+    emailVerified: boolean;
+  }
 ): Promise<{ userId: string; tenantId: string }> {
   const userId = newId();
   const tenantId = newId();
@@ -104,9 +119,19 @@ async function createUserWithTenant(
 
   await env.DB.batch([
     env.DB.prepare(
-      `INSERT INTO users (id, email, password_hash, display_name, is_platform_admin, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`
-    ).bind(userId, input.email, passwordHash, input.displayName, input.isPlatformAdmin ? 1 : 0, now, now),
+      `INSERT INTO users
+         (id, email, password_hash, display_name, is_platform_admin, email_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    ).bind(
+      userId,
+      input.email,
+      passwordHash,
+      input.displayName,
+      input.isPlatformAdmin ? 1 : 0,
+      input.emailVerified ? 1 : 0,
+      now,
+      now
+    ),
     env.DB.prepare(
       `INSERT INTO tenants (id, name, slug, plan_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)`
     ).bind(tenantId, tenantName, tenantSlugFrom(input.email), planId, now, now),
@@ -118,12 +143,21 @@ async function createUserWithTenant(
   return { userId, tenantId };
 }
 
-function publicUser(ctx: { user: { id: string; email: string; displayName: string | null; isPlatformAdmin: boolean } }) {
+function publicUser(ctx: {
+  user: {
+    id: string;
+    email: string;
+    displayName: string | null;
+    isPlatformAdmin: boolean;
+    emailVerified: boolean;
+  };
+}) {
   return {
     id: ctx.user.id,
     email: ctx.user.email,
     displayName: ctx.user.displayName,
     isPlatformAdmin: ctx.user.isPlatformAdmin,
+    emailVerified: ctx.user.emailVerified,
   };
 }
 
@@ -173,6 +207,10 @@ auth.post("/bootstrap", async (c) => {
       password: body.password as string,
       displayName: displayNameOf(body.displayName),
       isPlatformAdmin: true,
+      // First-run claim happens at the console; there is no third party
+      // to confirm, and requiring email here could lock an operator out
+      // of an instance that has no mail provider yet.
+      emailVerified: true,
     });
   } catch (err) {
     // Only a UNIQUE violation means someone else claimed the instance
@@ -237,6 +275,7 @@ auth.post("/register", async (c) => {
       password: body.password as string,
       displayName: displayNameOf(body.displayName),
       isPlatformAdmin: false,
+      emailVerified: !verificationRequired(env),
     });
 
     const session = await createSession(env, created.userId, {
@@ -380,7 +419,12 @@ auth.get("/session", async (c) => {
     .bind(ctx.user.id)
     .all<{ id: string; name: string; slug: string; status: string; role: string }>();
 
-  return ok({ user: publicUser(ctx), tenants: memberships.results });
+  return ok({
+    user: publicUser(ctx),
+    tenants: memberships.results,
+    // Lets the console show a verification banner without guessing.
+    verificationRequired: verificationRequired(c.env),
+  });
 });
 
 /** Change password, then drop every other session (classic hijack recovery). */
@@ -420,4 +464,180 @@ auth.post("/password", async (c) => {
   const res = ok({});
   res.headers.set("set-cookie", sessionCookieHeader(c.req.raw, session.token));
   return res;
+});
+
+// -------------------------------------------------------- password reset
+
+const RESET_IP_LIMIT = 10;
+const RESET_ACCOUNT_LIMIT = 4;
+const RESET_WINDOW_MS = 60 * 60 * 1000;
+
+/** Site name for email copy; falls back rather than exposing config. */
+async function siteName(env: Env): Promise<string> {
+  const row = await env.DB.prepare(
+    "SELECT value_json AS v FROM platform_settings WHERE key = 'site_name'"
+  ).first<{ v: string }>();
+  try {
+    return row?.v ? (JSON.parse(row.v) as string) : "Invitations";
+  } catch {
+    return "Invitations";
+  }
+}
+
+/**
+ * Begin a password reset.
+ *
+ * Always answers the same, whether the address is unknown, known, or
+ * belongs to a disabled user. Anything else turns this endpoint into an
+ * account-existence oracle.
+ */
+auth.post("/forgot-password", async (c) => {
+  const env = c.env;
+  if (!isSameOrigin(c.req.raw)) return fail("csrf", 403);
+
+  const body = await readJson(c);
+  const email = normalizeEmail(body?.email);
+
+  // Both buckets: per-IP stops broad abuse, per-account stops using the
+  // endpoint to repeatedly mail one victim.
+  const ipHash = await clientIpHash(c.req.raw);
+  const ipLimit = await rateLimit(env, `reset:ip:${ipHash}`, RESET_IP_LIMIT, RESET_WINDOW_MS);
+  if (!ipLimit.allowed) return fail("rate_limited", 429, { retryAfter: ipLimit.retryAfterSec });
+
+  // The generic answer, returned on every path below.
+  const accepted = ok({ message: "If an account exists for that email, a reset link has been sent." });
+
+  if (!email) return accepted;
+
+  const acctLimit = await rateLimit(
+    env,
+    `reset:acct:${await hashToken(email)}`,
+    RESET_ACCOUNT_LIMIT,
+    RESET_WINDOW_MS
+  );
+  if (!acctLimit.allowed) return accepted;
+
+  const user = await env.DB.prepare("SELECT id, status FROM users WHERE email = ?")
+    .bind(email)
+    .first<{ id: string; status: string }>();
+
+  // Unknown or disabled: same response, no email sent.
+  if (!user || user.status !== "active") return accepted;
+
+  const base = baseUrl(env);
+  if (!base || !emailConfigured(env)) {
+    // Misconfiguration is an operator problem, not a user-visible one,
+    // and must not leak that the account exists.
+    console.error("password_reset_unavailable", emailConfigured(env) ? "missing_base_url" : "no_email_provider");
+    return accepted;
+  }
+
+  const { token } = await issueToken(env, user.id, "password_reset");
+  const message = passwordResetEmail(
+    `${base}/admin/reset-password?token=${encodeURIComponent(token)}`,
+    await siteName(env),
+    Math.round(RESET_TTL_MS / 60000)
+  );
+
+  // A delivery failure is logged inside the email layer and deliberately
+  // not surfaced: the response must not vary with account existence.
+  await sendTransactionalEmail(env, { ...message, to: email });
+  return accepted;
+});
+
+/**
+ * Complete a password reset.
+ *
+ * Redemption is atomic and single-use, and every existing session is
+ * revoked — a reset is also the recovery path from a compromised account,
+ * so leaving an attacker's session alive would defeat it.
+ */
+auth.post("/reset-password", async (c) => {
+  const env = c.env;
+  if (!isSameOrigin(c.req.raw)) return fail("csrf", 403);
+
+  const body = await readJson(c);
+  if (!body) return fail("invalid_body");
+
+  const problem = passwordProblem(body.password);
+  if (problem) return fail(problem);
+
+  const redeemed = await redeemToken(env, String(body.token ?? ""), "password_reset");
+  // Expired, unknown, malformed, already used: one indistinguishable answer.
+  if (!redeemed || redeemed.status !== "active") return fail("invalid_token", 400);
+
+  const hash = await hashPassword(body.password as string, env);
+  await env.DB.batch([
+    env.DB.prepare(
+      // A completed reset also confirms the address: the user proved
+      // control of the inbox to get here.
+      "UPDATE users SET password_hash = ?, email_verified = 1, updated_at = ? WHERE id = ?"
+    ).bind(hash, nowMs(), redeemed.userId),
+    env.DB.prepare(
+      "UPDATE sessions SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL"
+    ).bind(nowMs(), redeemed.userId),
+  ]);
+
+  await revokeTokens(env, redeemed.userId, "password_reset");
+  return ok({});
+});
+
+// ---------------------------------------------------- email verification
+
+const VERIFY_LIMIT = 5;
+const VERIFY_WINDOW_MS = 60 * 60 * 1000;
+
+/** Send (or resend) a verification email for the signed-in user. */
+auth.post("/send-verification", async (c) => {
+  const env = c.env;
+  if (!isSameOrigin(c.req.raw)) return fail("csrf", 403);
+
+  const ctx = await resolveSession(c.req.raw, env);
+  if (!ctx) return fail("unauthorized", 401);
+
+  const row = await env.DB.prepare("SELECT email_verified AS v FROM users WHERE id = ?")
+    .bind(ctx.user.id)
+    .first<{ v: number }>();
+  if (row?.v === 1) return ok({ alreadyVerified: true });
+
+  const limit = await rateLimit(
+    env,
+    `verify:${ctx.user.id}`,
+    VERIFY_LIMIT,
+    VERIFY_WINDOW_MS
+  );
+  if (!limit.allowed) return fail("rate_limited", 429, { retryAfter: limit.retryAfterSec });
+
+  const base = baseUrl(env);
+  if (!base || !emailConfigured(env)) return fail("email_not_configured", 503);
+
+  // Issuing supersedes any outstanding token, so a resend leaves exactly
+  // one live link rather than accumulating them.
+  const { token } = await issueToken(env, ctx.user.id, "email_verification");
+  const message = verificationEmail(
+    `${base}/admin/verify-email?token=${encodeURIComponent(token)}`,
+    await siteName(env),
+    Math.round(VERIFICATION_TTL_MS / 3600000)
+  );
+
+  const result = await sendTransactionalEmail(env, { ...message, to: ctx.user.email });
+  if (!result.ok) return fail("email_send_failed", 502);
+
+  return ok({});
+});
+
+/** Redeem a verification token. Unauthenticated: the link is the proof. */
+auth.post("/verify-email", async (c) => {
+  const env = c.env;
+  if (!isSameOrigin(c.req.raw)) return fail("csrf", 403);
+
+  const body = await readJson(c);
+  const redeemed = await redeemToken(env, String(body?.token ?? ""), "email_verification");
+  if (!redeemed) return fail("invalid_token", 400);
+
+  await env.DB.prepare("UPDATE users SET email_verified = 1, updated_at = ? WHERE id = ?")
+    .bind(nowMs(), redeemed.userId)
+    .run();
+
+  return ok({});
 });

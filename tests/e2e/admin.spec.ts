@@ -37,10 +37,33 @@ async function signUp(page: Page): Promise<{ email: string }> {
   await page.getByRole("textbox", { name: "Password" }).fill(PASSWORD);
   await page.getByRole("button", { name: /^(create account|create administrator)$/i }).click();
 
+  // Hosted mode requires a confirmed address before tenant work. These
+  // suites test the console, not the verification gate, so the account
+  // is marked verified exactly as a completed confirmation would —
+  // verification itself is covered in tests/recovery.test.ts.
+  const { execFile } = await import("node:child_process");
+  const { promisify } = await import("node:util");
+  await promisify(execFile)(
+    "npx",
+    [
+      "wrangler",
+      "d1",
+      "execute",
+      "invite",
+      "--local",
+      "--command",
+      `UPDATE users SET email_verified = 1 WHERE email = '${email}'`,
+    ],
+    { cwd: process.cwd() }
+  );
+  await page.reload();
+
+
   // The account menu carries the email once the session resolves.
   await expect(page.getByRole("button", { name: email, exact: false })).toBeVisible({
     timeout: 15_000,
   });
+
   return { email };
 }
 
@@ -159,12 +182,12 @@ test.describe("admin", () => {
 
     await page.getByRole("tab", { name: "Content" }).click();
 
+    // A new invitation arrives with valid starter content, so editing a
+    // field is what makes the draft dirty and the save button live.
     await page.getByLabel("Partner 1 — name").fill("李天豪");
     await page.getByLabel("Partner 2 — name").fill("刘蔼蕴");
-    // The theme requires a ceremony date; without it the draft is
-    // legitimately invalid and the server refuses it.
-    await setCeremonyDate(page);
 
+    await expect(page.getByRole("button", { name: "Save draft" })).toBeEnabled();
     await page.getByRole("button", { name: "Save draft" }).click();
     await expect(page.getByText("Draft saved")).toBeVisible({ timeout: 10_000 });
 
