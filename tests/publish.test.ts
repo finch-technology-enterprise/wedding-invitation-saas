@@ -162,15 +162,42 @@ describe("draft validation", () => {
     expect(JSON.parse(row!.d).couple.groom.zh).toBe("李天豪");
   });
 
-  test("unsupported properties are dropped, not published", async () => {
-    await saveDraft(alice, baseConfig({ evilKey: "payload", copy: { cover: { welcome: "OK" } } }));
+  test("an unsupported property is rejected, not silently dropped", async () => {
+    const res = await saveDraft(alice, baseConfig({ evilKey: "payload" }));
+    expect(res.status).toBe(422);
+
+    const data = await body<{ errors: Array<{ path: string; code: string }> }>(res);
+    expect(data.errors).toContainEqual({ path: "evilKey", code: "unknown_property" });
+
+    // Nothing was stored: a rejected draft must not partially persist.
+    const row = await env.DB.prepare("SELECT draft_json AS d FROM invitations WHERE id = ?")
+      .bind(alice.invitationId)
+      .first<{ d: string | null }>();
+    expect(row?.d).toBeNull();
+  });
+
+  test("a misspelled nested property names the exact offending path", async () => {
+    const res = await saveDraft(
+      alice,
+      baseConfig({ copy: { cover: { welcom: "typo" } } })
+    );
+    expect(res.status).toBe(422);
+
+    const data = await body<{ errors: Array<{ path: string; code: string }> }>(res);
+    expect(data.errors).toContainEqual({ path: "copy.cover.welcom", code: "unknown_property" });
+  });
+
+  test("a validated config round-trips without tripping its own metadata", async () => {
+    // Export → import must not fail on themeId/themeVersion, which
+    // validation itself stamps onto the stored config.
+    expect((await saveDraft(alice, baseConfig())).status).toBe(200);
 
     const row = await env.DB.prepare("SELECT draft_json AS d FROM invitations WHERE id = ?")
       .bind(alice.invitationId)
       .first<{ d: string }>();
-    const saved = JSON.parse(row!.d);
-    expect(saved.evilKey).toBeUndefined();
-    expect(saved.themeId).toBe("cinematic-classic");
+
+    const res = await saveDraft(alice, JSON.parse(row!.d));
+    expect(res.status).toBe(200);
   });
 
   test("text over the frozen theme's limit is rejected with a structured error", async () => {
@@ -246,8 +273,16 @@ describe("draft validation", () => {
   test("an unknown media slot is rejected", async () => {
     const res = await saveDraft(alice, baseConfig({ media: { banner: { assetId: null } } }));
     expect(res.status).toBe(422);
+    const data = await body<{ errors: Array<{ path: string; code: string }> }>(res);
+    expect(data.errors).toContainEqual({ path: "media.banner", code: "unknown_property" });
+  });
+
+  test("audio cannot be smuggled in as a media slot", async () => {
+    // background_music is configured under `music`, not `media`.
+    const res = await saveDraft(alice, baseConfig({ media: { background_music: { assetId: null } } }));
+    expect(res.status).toBe(422);
     const data = await body<{ errors: Array<{ code: string }> }>(res);
-    expect(data.errors.some((e) => e.code === "unknown_slot")).toBe(true);
+    expect(data.errors[0]!.code).toBe("unknown_property");
   });
 
   test("a javascript: maps URL is rejected", async () => {

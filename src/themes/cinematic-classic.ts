@@ -289,11 +289,111 @@ export interface ValidationResult {
 }
 
 /**
+ * The complete set of accepted configuration paths, derived from the
+ * manifest so the schema stays the single source of truth.
+ *
+ * Anything not described here is rejected rather than dropped: silently
+ * discarding a key loses tenant data, turns a typo into a mystery, and
+ * makes import/export ambiguous. A future theme version that wants
+ * forward-compatible extras must declare an explicit namespace for them,
+ * not rely on arbitrary keys being tolerated.
+ */
+function buildAllowedPaths(): Set<string> {
+  const allowed = new Set<string>([
+    // Stamped by validation; accepted on input so a round-tripped config
+    // (export → import) does not fail on its own metadata.
+    "themeId",
+    "themeVersion",
+    "couple",
+    "couple.groom",
+    "couple.groom.zh",
+    "couple.groom.en",
+    "couple.bride",
+    "couple.bride.zh",
+    "couple.bride.en",
+    "date",
+    "date.iso",
+    "date.lunar",
+    "date.timeLabel",
+    "date.durationHours",
+    "venue",
+    "venue.tba",
+    "venue.name",
+    "venue.address",
+    "venue.mapsUrl",
+    "rsvp",
+    "rsvp.deadlineISO",
+    "rsvp.maxGuests",
+    "media",
+    "music",
+    "music.assetId",
+    "music.enabled",
+    "music.title",
+    "motion",
+    "motion.driftPxPerSec",
+    "copy",
+  ]);
+
+  // Copy paths and their intermediate containers.
+  for (const path of Object.keys(FIELD_LIMITS)) {
+    const parts = path.split(".");
+    for (let i = 1; i <= parts.length; i++) allowed.add(parts.slice(0, i).join("."));
+  }
+
+  // Media slots plus their per-slot properties.
+  for (const slot of Object.keys(MEDIA_SLOTS)) {
+    if (slot === "background_music") continue; // audio lives under `music`
+    allowed.add(`media.${slot}`);
+    allowed.add(`media.${slot}.assetId`);
+    allowed.add(`media.${slot}.focal`);
+    allowed.add(`media.${slot}.focal.x`);
+    allowed.add(`media.${slot}.focal.y`);
+  }
+
+  return allowed;
+}
+
+const ALLOWED_PATHS = buildAllowedPaths();
+
+/** Leaf paths whose value is opaque to the walk (arrays of strings, etc.). */
+const LEAF_PATHS = new Set<string>([
+  ...Object.keys(LIST_LIMITS),
+  ...Object.keys(FIELD_LIMITS),
+]);
+
+/** Walk the supplied object and record every path the theme does not declare. */
+function collectUnknownPaths(
+  node: unknown,
+  prefix: string,
+  errors: FieldError[],
+  depth = 0
+): void {
+  // Bound the walk: a deeply nested payload is itself a red flag, and
+  // unbounded recursion here would be a cheap denial-of-service.
+  if (depth > 8) return;
+  if (typeof node !== "object" || node === null || Array.isArray(node)) return;
+
+  for (const key of Object.keys(node)) {
+    const path = prefix ? `${prefix}.${key}` : key;
+
+    if (!ALLOWED_PATHS.has(path)) {
+      errors.push({ path, code: "unknown_property" });
+      continue;
+    }
+    // Declared leaves are validated by their own checkers; do not descend
+    // into a string's characters or a list's entries.
+    if (LEAF_PATHS.has(path)) continue;
+
+    collectUnknownPaths((node as Record<string, unknown>)[key], path, errors, depth + 1);
+  }
+}
+
+/**
  * Validate a draft against the theme contract.
  *
- * Unknown properties are dropped rather than merged, so a client cannot
- * smuggle an unsupported key into published configuration and have the
- * renderer or a future theme version pick it up.
+ * Unknown properties are rejected, not dropped. The manifest is
+ * authoritative: if the theme does not declare a path, the config is
+ * invalid and the caller is told exactly which path offended.
  */
 export function validateConfig(input: unknown): ValidationResult {
   const errors: FieldError[] = [];
@@ -302,6 +402,10 @@ export function validateConfig(input: unknown): ValidationResult {
     return { ok: false, errors: [{ path: "", code: "expected_object" }] };
   }
   const raw = input as Record<string, any>;
+
+  // Structural check first: an unknown key is reported on its own terms
+  // rather than as a confusing downstream type error.
+  collectUnknownPaths(raw, "", errors);
 
   // --- couple ---
   const couple: ValidatedConfig["couple"] = {};
@@ -376,12 +480,8 @@ export function validateConfig(input: unknown): ValidationResult {
   const assetIds: string[] = [];
   const rawMedia = raw.media ?? {};
 
-  for (const key of Object.keys(rawMedia)) {
-    if (!(key in MEDIA_SLOTS) || key === "background_music") {
-      errors.push({ path: `media.${key}`, code: "unknown_slot" });
-    }
-  }
-
+  // Unknown slots are caught by the structural walk above as
+  // `unknown_property`; no separate check is needed here.
   for (const slot of IMAGE_SLOTS) {
     const entry = rawMedia[slot];
     if (!entry) {

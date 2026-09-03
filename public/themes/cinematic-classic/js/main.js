@@ -6,7 +6,7 @@
  * behaviour lives in the modules it imports.
  */
 
-import { buildConfig, readBootstrap } from "./config.js";
+import { wedding as defaults } from "./defaults.js";
 import { loadChineseFonts } from "./fonts.js";
 import { $, $$ } from "./dom.js";
 import { parseWeddingDate, weddingParts, formatDottedDate, buildIcsUrl } from "./datetime.js";
@@ -15,6 +15,117 @@ import { createTimeline } from "./timeline.js";
 import { startCountdown } from "./countdown.js";
 import { setupAudio } from "./audio.js";
 import { setupRsvp } from "./rsvp.js";
+
+/* ---------------------------------------------------------------
+   Bootstrap adapter
+
+   The renderer used to import a hardcoded `wedding` object. It now
+   receives the same shape, assembled from the published revision the
+   Worker inlined as window.__INVITATION__.
+
+   This lives in main.js rather than its own module so the public page
+   costs no extra request: the adapter is a handful of pure functions
+   used once at boot, and the frozen request budget is 15.
+
+   Every other theme module is untouched — they still read
+   `wedding.copy.*` and `wedding.photos.hero.ready`. Translating platform
+   config into that shape happens here and only here.
+   --------------------------------------------------------------- */
+
+/** Deep merge, ignoring null/undefined so a partial config only overrides
+ *  what it actually specifies. Arrays replace wholesale — a poem with
+ *  fewer lines must not leave the old trailing lines behind. */
+function merge(base, override) {
+  if (override === null || override === undefined) return base;
+  if (Array.isArray(override)) return override.slice();
+  if (typeof override !== "object") return override;
+
+  const out = Array.isArray(base) ? base.slice() : { ...base };
+  for (const [key, value] of Object.entries(override)) {
+    if (value === undefined) continue;
+    out[key] = key in out ? merge(out[key], value) : value;
+  }
+  return out;
+}
+
+/**
+ * Map platform media into the slot shape the renderer already understands.
+ *
+ * `ready` remains the switch that decides whether a file is requested at
+ * all. An unsupplied slot keeps its placeholder and costs no network
+ * traffic — the same behaviour as the frozen baseline, now driven by
+ * whether the published revision supplied an asset rather than by a
+ * hand-edited boolean.
+ */
+function applyMedia(photos, mediaUrls, mediaConfig) {
+  const out = { ...photos };
+
+  for (const [slot, base] of Object.entries(photos)) {
+    const url = mediaUrls[slot];
+    if (!url) {
+      // No published asset: placeholder, exactly as before.
+      out[slot] = { ...base, ready: false };
+      continue;
+    }
+
+    const focal = mediaConfig?.[slot]?.focal;
+    out[slot] = {
+      ...base,
+      src: url,
+      ready: true,
+      // Focal point travels as a CSS object-position string. Left
+      // undefined rather than "50% 50%" when unconfigured, so the
+      // stylesheet's own value keeps applying and the cascade is
+      // untouched.
+      ...(focal ? { position: `${focal.x}% ${focal.y}%` } : {}),
+    };
+  }
+
+  return out;
+}
+
+/** Build the renderer's config from the inlined bootstrap. With none
+ *  present the defaults render alone, so the theme still works when
+ *  opened as a plain static file. */
+function buildConfig(bootstrap) {
+  if (!bootstrap || typeof bootstrap !== "object") {
+    return { wedding: defaults, meta: { isPreview: false, slug: null, revisionId: null } };
+  }
+
+  const config = bootstrap.config ?? {};
+  const mediaUrls = bootstrap.mediaUrls ?? {};
+
+  // Platform config carries only what a tenant can edit; everything else
+  // (labels, ratios, alt text) comes from the theme defaults.
+  const merged = merge(defaults, {
+    couple: config.couple,
+    date: config.date,
+    copy: config.copy,
+    venue: config.venue,
+    rsvp: config.rsvp,
+  });
+
+  merged.photos = applyMedia(defaults.photos, mediaUrls, config.media);
+
+  merged.music = {
+    ...defaults.music,
+    ...(config.music?.title ? { title: config.music.title } : {}),
+    src: mediaUrls.background_music ?? defaults.music.src,
+    // Music plays only when an asset was published AND the tenant enabled
+    // it. Either alone leaves the control in its muted state.
+    ready: Boolean(mediaUrls.background_music) && config.music?.enabled === true,
+  };
+
+  return {
+    wedding: merged,
+    meta: {
+      isPreview: Boolean(bootstrap.isPreview),
+      slug: bootstrap.slug ?? null,
+      revisionId: bootstrap.revisionId ?? null,
+      driftPxPerSec: config.motion?.driftPxPerSec,
+    },
+  };
+}
 
 /* ---------------------------------------------------------------
    Proportional scaling: 1rem === 1/10 of the canvas width.
@@ -91,7 +202,9 @@ function boot() {
   // Configuration arrives inlined by the Worker (published revision or
   // preview draft). Falls back to the theme defaults when opened without
   // a bootstrap, so the theme remains runnable on its own.
-  const { wedding, meta } = buildConfig(readBootstrap());
+  const { wedding, meta } = buildConfig(
+    typeof window !== "undefined" ? window.__INVITATION__ : undefined
+  );
 
   // Request the CJK subsets first: the sooner they start, the smaller the
   // window in which fallback metrics are on screen.
