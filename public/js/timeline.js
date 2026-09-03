@@ -249,15 +249,32 @@ export function createTimeline({
       return;
     }
 
-    // Release velocity from the tail of the pointer history.
+    // Release velocity, measured across the tail of the pointer history.
+    //
+    // It must be derived from the recorded moves rather than from the
+    // pointerup event: pointerup usually reports the same coordinate as
+    // the final pointermove, so comparing against it yields ~0 and the
+    // flick dies on release.
     velocity = 0;
-    for (let i = history.length - 1; i >= 0; i--) {
-      const [y, t] = history[i];
-      const dt = e.timeStamp - t;
-      if (dt > 8) {
-        velocity = (e.clientY - y) / dt;
-        break;
+    if (history.length >= 2) {
+      const [lastY, lastT] = history[history.length - 1];
+      for (let i = history.length - 2; i >= 0; i--) {
+        const [y, t] = history[i];
+        const dt = lastT - t;
+        if (dt >= 12) {
+          velocity = (lastY - y) / dt;
+          break;
+        }
       }
+      // Very fast flicks can fit inside one 12ms window; fall back to the
+      // full history so they are not silently dropped.
+      if (velocity === 0) {
+        const [y0, t0] = history[0];
+        const dt = lastT - t0;
+        if (dt > 0) velocity = (lastY - y0) / dt;
+      }
+      // A stale gesture (finger held still before lifting) has no throw.
+      if (e.timeStamp - lastT > 90) velocity = 0;
     }
 
     const outOfBounds = offset > 0 || offset < min;

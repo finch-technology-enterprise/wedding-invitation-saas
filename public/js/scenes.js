@@ -8,7 +8,13 @@
  */
 
 import { el, svg, lines } from "./dom.js";
-import { formatChineseDate, formatDottedDate, monthGrid } from "./datetime.js";
+import {
+  formatChineseDate,
+  formatDottedDate,
+  monthGrid,
+  parseWeddingDate,
+  weddingParts,
+} from "./datetime.js";
 
 /* ---------------------------------------------------------------
    Shared pieces
@@ -42,28 +48,26 @@ function photo(slot, className, label) {
     style: { "--ratio": slot.ratio },
   });
 
-  frame.append(el("span", { class: "photo__pending", text: label }));
+  // Configuration decides whether the file exists. An unsupplied slot is
+  // never requested, so there is no failed fetch, no console error and
+  // no wasted round-trip — the placeholder is simply the rendered state.
+  if (!slot.ready) {
+    frame.append(el("span", { class: "photo__pending", text: label }));
+    return frame;
+  }
 
-  // Probe first so a missing file never reaches the document as a
-  // failed <img> request the user can see.
-  const probe = new Image();
-  probe.decoding = "async";
-  probe.addEventListener("load", () => {
-    const img = el("img", {
-      src: slot.src,
-      alt: slot.alt || "",
-      decoding: "async",
-      width: probe.naturalWidth,
-      height: probe.naturalHeight,
-    });
-    frame.prepend(img);
+  const img = el("img", {
+    src: slot.src,
+    alt: slot.alt || "",
+    decoding: "async",
+    loading: "eager",
+  });
+  // Fade in on decode so a slow image does not pop into the composition.
+  img.addEventListener("load", () => {
     frame.classList.add("is-filled");
     requestAnimationFrame(() => img.classList.add("is-loaded"));
   });
-  probe.addEventListener("error", () => {
-    // Slot stays in its placeholder state. Intentionally silent.
-  });
-  probe.src = slot.src;
+  frame.append(img);
 
   return frame;
 }
@@ -80,11 +84,16 @@ function reveal(node) {
 
 function sceneCover(w, parts) {
   const c = w.copy.cover;
+  // The photograph fills the opening screen and the title sits *on* it,
+  // as the reference does. Stacking type above a shorter image instead
+  // reads as a web page hero rather than an invitation plate.
   return el("section", { class: "scene", id: "scene-cover" }, [
-    reveal(el("p", { class: "t-title cover__title", text: c.bracket })),
-    reveal(el("p", { class: "t-latin cover__welcome", text: c.welcome })),
-    reveal(el("p", { class: "t-date cover__date", text: formatDottedDate(parts) })),
     photo(w.photos.hero, "cover__photo", "hero"),
+    reveal(el("div", { class: "cover__type" }, [
+      el("p", { class: "t-title cover__title", text: c.bracket }),
+      el("p", { class: "t-latin cover__welcome", text: c.welcome }),
+      el("p", { class: "t-date cover__date", text: formatDottedDate(parts) }),
+    ])),
   ]);
 }
 
@@ -96,12 +105,12 @@ function sceneNames(w) {
   const { groom, bride } = w.couple;
   return el("section", { class: "scene", id: "scene-names" }, [
     reveal(el("div", { class: "names__seal" }, [seal()])),
-    reveal(el("p", { class: "names__zh", text: groom.zh })),
-    reveal(el("p", { class: "names__en", text: groom.en })),
-    reveal(el("p", { class: "names__amp", text: "&" })),
-    reveal(el("p", { class: "names__zh", text: bride.zh })),
-    reveal(el("p", { class: "names__en", text: bride.en })),
-    reveal(rule("names__rule")),
+    el("p", { class: "names__zh", text: groom.zh }),
+    el("p", { class: "names__en", text: groom.en }),
+    el("p", { class: "names__amp", text: "&" }),
+    el("p", { class: "names__zh", text: bride.zh }),
+    el("p", { class: "names__en", text: bride.en }),
+    rule("names__rule"),
   ]);
 }
 
@@ -113,9 +122,9 @@ function scenePoem(w) {
   const p = w.copy.poem;
   return el("section", { class: "scene", id: "scene-poem" }, [
     reveal(el("h2", { class: "poem__heading", text: p.heading })),
-    reveal(el("div", { class: "poem__lines t-body" }, lines(p.lines))),
-    reveal(el("p", { class: "poem__motif", text: p.motif })),
-    reveal(el("div", { class: "t-body" }, lines(p.after))),
+    el("div", { class: "poem__lines t-body" }, lines(p.lines)),
+    el("p", { class: "poem__motif", text: p.motif }),
+    el("div", { class: "t-body" }, lines(p.after)),
   ]);
 }
 
@@ -137,13 +146,11 @@ function scenePortrait(w) {
     ]);
 
   return el("section", { class: "scene", id: "scene-portrait" }, [
-    reveal(
-      el("div", { class: "portrait__row" }, [
+    el("div", { class: "portrait__row" }, [
         side("start", lbl.brideLabel, bride.zh),
         photo(w.photos.portrait, "portrait__photo", "portrait"),
         side("end", lbl.groomLabel, groom.zh),
-      ])
-    ),
+    ]),
   ]);
 }
 
@@ -160,13 +167,13 @@ function sceneStory(w) {
         el("h2", { class: "story__heading", text: s.heading }),
       ])
     ),
-    reveal(el("p", { class: "story__announce", text: s.announce })),
-    reveal(photo(w.photos.story, "story__photo", "story")),
-    reveal(el("p", { class: "story__badge", text: s.badge })),
-    reveal(rule("story__badge-rule")),
-    reveal(el("p", { class: "story__invite", text: s.invite })),
-    reveal(el("div", { class: "story__letter t-body t-body-sm" }, lines(s.letter))),
-    reveal(el("p", { class: "story__caption", text: s.caption })),
+    el("p", { class: "story__announce", text: s.announce }),
+    photo(w.photos.story, "story__photo", "story"),
+    el("p", { class: "story__badge", text: s.badge }),
+    rule("story__badge-rule"),
+    el("p", { class: "story__invite", text: s.invite }),
+    el("div", { class: "story__letter t-body t-body-sm" }, lines(s.letter)),
+    el("p", { class: "story__caption", text: s.caption }),
   ]);
 }
 
@@ -271,14 +278,14 @@ function sceneTime(w, parts) {
   ]);
 
   return el("section", { class: "scene", id: "scene-time" }, [
-    reveal(el("p", { class: "time__mark", "aria-hidden": "true", text: "❦" })),
+    el("p", { class: "time__mark", "aria-hidden": "true", text: "❦" }),
     reveal(el("h2", { class: "t-heading", text: t.heading })),
-    reveal(el("p", { class: "time__date", text: dateText })),
-    detail ? reveal(el("p", { class: "time__date t-body-sm", text: detail })) : null,
-    reveal(calendar(parts)),
-    reveal(countdown()),
-    reveal(el("p", { class: "t-quote time__quote", text: t.quote })),
-    reveal(actions),
+    el("p", { class: "time__date", text: dateText }),
+    detail ? el("p", { class: "time__date t-body-sm", text: detail }) : null,
+    calendar(parts),
+    countdown(),
+    el("p", { class: "t-quote time__quote", text: t.quote }),
+    actions,
   ]);
 }
 
@@ -292,14 +299,13 @@ function sceneVenue(w) {
 
   return el("section", { class: "scene", id: "scene-venue" }, [
     reveal(el("h2", { class: "t-heading", text: v.heading })),
-    reveal(photo(w.photos.venue, "venue__photo", "venue")),
-    reveal(el("p", { class: "venue__name", text: tba ? v.tbaName : w.venue.name })),
-    reveal(
+    photo(w.photos.venue, "venue__photo", "venue"),
+    el("p", { class: "venue__name", text: tba ? v.tbaName : w.venue.name }),
       el("p", {
         class: "venue__address",
         text: tba ? v.tbaNote : w.venue.address,
       })
-    ),
+    ,
   ]);
 }
 
@@ -310,16 +316,21 @@ function sceneVenue(w) {
 function sceneClosing(w) {
   const c = w.copy.closing;
   const { groom, bride } = w.couple;
+  // The final emotional beat before the form. A full-bleed photograph
+  // sits behind the closing words so the invitation ends on an image
+  // rather than on a block of centred type.
   return el("section", { class: "scene", id: "scene-closing" }, [
-    reveal(el("div", { class: "closing__poem" }, lines(c.poem))),
-    reveal(rule()),
-    reveal(
-      el("div", { class: "closing__thanks" }, [
-        el("p", { text: c.thanks }),
-        el("p", { text: c.thanksLine2 }),
-      ])
-    ),
-    reveal(el("p", { class: "closing__names", text: `${groom.zh}　&　${bride.zh}` })),
+    photo(w.photos.closing, "closing__photo", "closing"),
+    el("div", { class: "closing__type" }, [
+      el("div", { class: "closing__poem" }, lines(c.poem)),
+      rule(),
+        el("div", { class: "closing__thanks" }, [
+          el("p", { text: c.thanks }),
+          el("p", { text: c.thanksLine2 }),
+        ])
+      ,
+      el("p", { class: "closing__names", text: `${groom.zh}　&　${bride.zh}` }),
+    ]),
   ]);
 }
 
@@ -336,6 +347,14 @@ function field({ id, label, required, control, hint }) {
     control,
     hint ? el("p", { class: "rsvp__hint", text: hint }) : null,
   ]);
+}
+
+/** Render the RSVP deadline from its ISO value, so it is stated once. */
+function deadlineText(w) {
+  const iso = w.rsvp.deadlineISO;
+  const parts = weddingParts(parseWeddingDate(iso), iso);
+  const date = `${parts.year} 年 ${parts.month + 1} 月 ${parts.day} 日`;
+  return w.copy.rsvp.deadlineLabel.replace("{date}", date);
 }
 
 function sceneRsvp(w) {
@@ -360,7 +379,6 @@ function sceneRsvp(w) {
         placeholder: r.name,
       }),
     }),
-
     el("div", { class: "field" }, [
       el("span", { class: "field__label", id: "rsvp-attending-label" }, [
         document.createTextNode(r.attending),
@@ -381,7 +399,6 @@ function sceneRsvp(w) {
         ]
       ),
     ]),
-
     el("div", { class: "field", id: "rsvp-guests-field" }, [
       el("label", { class: "field__label", for: "rsvp-guests", text: r.guests }),
       el("select", { class: "field__control", id: "rsvp-guests", name: "guests" }, guestOptions),
@@ -396,7 +413,6 @@ function sceneRsvp(w) {
       "aria-expanded": "false",
       "aria-controls": "rsvp-optional",
     }),
-
     el("div", { class: "rsvp__optional", id: "rsvp-optional", hidden: true }, [
       field({
         id: "rsvp-phone",
@@ -455,9 +471,13 @@ function sceneRsvp(w) {
   ]);
 
   return el("section", { class: "scene", id: "scene-rsvp" }, [
-    reveal(el("h2", { class: "t-heading", text: r.heading })),
-    reveal(el("p", { class: "rsvp__deadline", text: r.deadlineLabel })),
-    reveal(form),
+    // The ask is one unit so it can be swapped out wholesale for the
+    // thank-you, letting the survivor centre itself in the final frame.
+    el("div", { class: "rsvp__ask", id: "rsvp-ask" }, [
+      reveal(el("h2", { class: "t-heading", text: r.heading })),
+      el("p", { class: "rsvp__deadline", text: deadlineText(w) }),
+      form,
+    ]),
     success,
   ]);
 }

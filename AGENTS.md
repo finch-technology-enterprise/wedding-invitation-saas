@@ -22,8 +22,13 @@ This is **not** a scrolling webpage. The document never scrolls.
 - `html { font-size: viewportWidth / 10 }`, so `1rem` is one tenth of
   the canvas width and **everything scales proportionally**. Author new
   styles in `rem`, not `px`.
-- The canvas drifts upward automatically over ~72 seconds, can be
-  dragged manually, and parks itself when the RSVP form is reached.
+- The canvas drifts upward at a fixed ~46 px/s — the rate at which the
+  reference's copy stays readable — rather than over a fixed duration,
+  so editing copy does not change the reading pace. It can be dragged
+  manually and parks itself at the RSVP form. A supplied soundtrack
+  overrides the pace so the two finish together.
+- Photography and audio are gated by a `ready` flag in `content.js`:
+  unsupplied assets are never requested. See `public/assets/README.md`.
 
 Frontend modules:
 
@@ -34,8 +39,8 @@ public/js/
   scenes.js     builds the ten scene chapters
   timeline.js   auto-drift + drag scrubbing
   countdown.js  flip-digit countdown
-  calendar.js   (logic lives in datetime.js)
-  datetime.js   every date derivation
+  datetime.js   every date derivation (calendar grid included)
+  fonts.js      CJK webfont subsetting
   audio.js      background music + control state
   rsvp.js       form behaviour
   dom.js        small element helpers
@@ -72,9 +77,10 @@ Commit with a concise imperative message (`feat:`, `fix:`, `chore:`).
 ## Assets
 
 Photography and music slots are documented in
-`public/assets/README.md`. Missing files degrade gracefully — the
-Worker answers `204` for unfilled photo slots, so an incomplete asset
-set never produces console errors.
+`public/assets/README.md`. Missing files degrade gracefully: the
+renderer reads the `ready` flag in `content.js` and never requests an
+asset that has not been supplied, so an incomplete set produces no
+network errors.
 
 ## Deploy — ALWAYS deploy after done
 

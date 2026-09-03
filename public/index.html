@@ -4,14 +4,27 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#ffffff" />
-  <meta name="description" content="李天豪与刘蔼蕴的婚礼邀请函 · 2027.10.09" />
+  <!-- Filled from content.js at boot so the date has one source of truth. -->
+  <meta name="description" content="婚礼邀请函" />
   <title>婚礼邀请函 | 李天豪 ❤ 刘蔼蕴</title>
+
+  <!-- Inline 囍 seal, so the tab icon costs no request and cannot 404. -->
+  <link
+    rel="icon"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23fff' stroke='%23b00808'/%3E%3Ctext x='16' y='23' font-size='19' text-anchor='middle' fill='%23b00808' font-family='serif'%3E%E5%9B%8D%3C/text%3E%3C/svg%3E"
+  />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <!--
+    Latin faces are small and load here. The Chinese faces are requested by
+    js/fonts.js with a `text=` parameter built from the actual copy, because
+    Google splits CJK into ~100 unicode-range subsets and the browser would
+    otherwise fetch dozens of them. See js/fonts.js.
+  -->
   <link
     rel="stylesheet"
-    href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500&family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@400;500&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400&display=swap"
   />
 
   <link rel="stylesheet" href="css/tokens.css" />

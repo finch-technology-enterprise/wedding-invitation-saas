@@ -31,8 +31,6 @@ const TYPES = {
   ".mp3": "audio/mpeg",
 };
 
-const PHOTO_SLOT = /^\/assets\/photos\/[A-Za-z0-9_-]+\.(jpg|jpeg|png|webp|avif)$/;
-
 createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);
   const path = url.pathname;
@@ -68,12 +66,6 @@ createServer(async (req, res) => {
     res.writeHead(200, { "content-type": TYPES[extname(file)] || "application/octet-stream" });
     res.end(data);
   } catch {
-    // Unfilled photography slots answer 204, exactly as the Worker does.
-    if (PHOTO_SLOT.test(path)) {
-      res.writeHead(204);
-      res.end();
-      return;
-    }
     res.writeHead(404, { "content-type": "text/plain" });
     res.end("not found");
   }

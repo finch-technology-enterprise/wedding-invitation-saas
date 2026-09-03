@@ -31,6 +31,7 @@ export function setupRsvp({ wedding, timeline, live }) {
 
   const form = $("#rsvp-form");
   const success = $("#rsvp-success");
+  const ask = $("#rsvp-ask");
   const errorBox = $("#rsvp-error");
   const submit = $("#rsvp-submit");
   const moreBtn = $("#rsvp-more");
@@ -137,10 +138,12 @@ export function setupRsvp({ wedding, timeline, live }) {
       const data = await res.json().catch(() => null);
 
       if (res.ok && data?.ok) {
-        form.hidden = true;
+        // Swap the whole ask — heading, deadline and form — for the
+        // thank-you, so the invitation closes on it rather than on a
+        // form that has already been answered.
+        ask.hidden = true;
         success.hidden = false;
         if (live) live.textContent = `${copy.successTitle}。${copy.successBody}`;
-        timeline.revealElement(success, 140);
         return;
       }
 

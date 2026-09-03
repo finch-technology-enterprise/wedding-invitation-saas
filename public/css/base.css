@@ -32,6 +32,16 @@ body {
   overscroll-behavior: none;
 }
 
+/* Headings carry no extra weight: the reference sets every text element
+   at 400 and relies on size, colour and spacing for hierarchy. Leaving
+   the UA's bold makes headings look like a web page. */
+h1,
+h2,
+h3 {
+  font-weight: 400;
+  font-size: inherit;
+}
+
 img {
   display: block;
   max-width: 100%;

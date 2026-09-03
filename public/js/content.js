@@ -39,12 +39,18 @@ export const wedding = {
   // ---------------------------------------------------------
   // Music
   //
-  // Drop an MP3/M4A at the path below and it plays automatically
-  // (subject to browser autoplay policy). If the file is absent the
-  // control renders in its muted state and nothing errors.
+  // TO ADD THE SOUNDTRACK:
+  //   1. save the file at the `src` path below
+  //   2. set `ready: true`
+  //
+  // While `ready` is false the file is never requested and the control
+  // renders in its muted state. Once present, playback is attempted on
+  // load (browsers usually block this, in which case the first tap
+  // starts it) and the timeline retimes to the track's duration.
   // ---------------------------------------------------------
   music: {
     src: "assets/audio/theme.m4a",
+    ready: false,
     title: "婚礼背景音乐",
   },
 
@@ -53,15 +59,23 @@ export const wedding = {
   //
   // Each slot has a fixed aspect ratio so the composition holds its
   // shape whether or not the photograph has been supplied yet.
-  // Drop a file at `src` and it appears — no layout code changes.
+  //
+  // `ready` is the switch. While it is false the renderer draws the
+  // placeholder and never requests the file, so an unsupplied photo
+  // costs zero network traffic and produces no console noise.
+  //
+  // TO ADD A PHOTOGRAPH:
+  //   1. save the file at the `src` path below
+  //   2. set `ready: true` for that slot
+  // No layout or CSS changes are needed.
   // ---------------------------------------------------------
   photos: {
-    hero: { src: "assets/photos/hero.jpg", ratio: "825 / 1000", alt: "李天豪与刘蔼蕴的婚纱照" },
-    portrait: { src: "assets/photos/portrait.jpg", ratio: "666 / 1000", alt: "李天豪与刘蔼蕴合影" },
-    story: { src: "assets/photos/story.jpg", ratio: "1 / 1", alt: "李天豪与刘蔼蕴的合照" },
-    landscape: { src: "assets/photos/landscape.jpg", ratio: "1418 / 1000", alt: "李天豪与刘蔼蕴的婚纱外景" },
-    venue: { src: "assets/photos/venue.jpg", ratio: "1110 / 1000", alt: "婚礼场地" },
-    closing: { src: "assets/photos/closing.jpg", ratio: "1 / 1", alt: "李天豪与刘蔼蕴" },
+    hero: { src: "assets/photos/hero.jpg", ratio: "825 / 1000", ready: false, alt: "李天豪与刘蔼蕴的婚纱照" },
+    portrait: { src: "assets/photos/portrait.jpg", ratio: "666 / 1000", ready: false, alt: "李天豪与刘蔼蕴合影" },
+    story: { src: "assets/photos/story.jpg", ratio: "1 / 1", ready: false, alt: "李天豪与刘蔼蕴的合照" },
+    landscape: { src: "assets/photos/landscape.jpg", ratio: "1418 / 1000", ready: false, alt: "李天豪与刘蔼蕴的婚纱外景" },
+    venue: { src: "assets/photos/venue.jpg", ratio: "1110 / 1000", ready: false, alt: "婚礼场地" },
+    closing: { src: "assets/photos/closing.jpg", ratio: "1 / 1", ready: false, alt: "李天豪与刘蔼蕴" },
   },
 
   // ---------------------------------------------------------
@@ -136,7 +150,9 @@ export const wedding = {
 
     rsvp: {
       heading: "敬盼回复",
-      deadlineLabel: "请在 2027 年 9 月 30 日前回复",
+      // {date} is replaced with rsvp.deadlineISO, so the deadline is
+      // stated in exactly one place.
+      deadlineLabel: "请在 {date} 前回复",
       name: "姓名",
       attending: "是否出席",
       yes: "欣然出席",

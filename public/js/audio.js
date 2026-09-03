@@ -9,11 +9,18 @@
  *    console noise and no broken UI.
  */
 
-export function setupAudio({ audio, toggle, src, title, onDuration }) {
-  let available = true;
+export function setupAudio({ audio, toggle, src, ready, title, onDuration }) {
+  // Configuration decides whether a track exists, so an unsupplied
+  // soundtrack costs no request and produces no console error.
+  let available = ready === true;
   let started = false;
 
   toggle.setAttribute("aria-label", `播放${title}`);
+
+  if (!available) {
+    toggle.setAttribute("aria-disabled", "true");
+    toggle.title = "背景音乐尚未设置";
+  }
 
   function paint(isPlaying) {
     toggle.classList.toggle("is-playing", isPlaying);

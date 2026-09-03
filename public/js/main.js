@@ -7,8 +7,9 @@
  */
 
 import { wedding } from "./content.js";
+import { loadChineseFonts } from "./fonts.js";
 import { $, $$ } from "./dom.js";
-import { parseWeddingDate, weddingParts, buildIcsUrl } from "./datetime.js";
+import { parseWeddingDate, weddingParts, formatDottedDate, buildIcsUrl } from "./datetime.js";
 import { renderScenes } from "./scenes.js";
 import { createTimeline } from "./timeline.js";
 import { startCountdown } from "./countdown.js";
@@ -87,6 +88,10 @@ function setupReveals(root, timeline, viewport) {
    --------------------------------------------------------------- */
 
 function boot() {
+  // Request the CJK subsets first: the sooner they start, the smaller the
+  // window in which fallback metrics are on screen.
+  loadChineseFonts(wedding);
+
   applyRootFontSize();
   window.addEventListener("resize", applyRootFontSize);
   window.addEventListener("orientationchange", applyRootFontSize);
@@ -102,14 +107,32 @@ function boot() {
   const weddingDate = parseWeddingDate(wedding.date.iso);
   const parts = weddingParts(weddingDate, wedding.date.iso);
 
+  // Title and description derive from the same config as the invitation,
+  // so the couple and date are never stated twice.
+  const coupleLine = `${wedding.couple.groom.zh} ❤ ${wedding.couple.bride.zh}`;
+  document.title = `${wedding.copy.cover.bracket.replace(/[【】]/g, "")} | ${coupleLine}`;
+  const desc = document.querySelector('meta[name="description"]');
+  if (desc) desc.content = `${coupleLine} · ${formatDottedDate(parts)}`;
+
   renderScenes(stage, wedding, parts);
 
   /* ---- timeline ---- */
 
+  // Pacing is set by scroll *speed*, not by a fixed total duration. The
+  // reference covers 3264px in 72s ≈ 45px/s, which is the rate at which
+  // its Chinese body text stays readable as it passes. Our canvas is
+  // longer (the cover and the RSVP each occupy a deliberate full frame),
+  // so holding 72s would move 29% faster and rush the copy. Matching the
+  // rate instead keeps the reading experience the same.
+  //
+  // A supplied soundtrack overrides this: setDuration() retimes the
+  // canvas to the track so the two finish together.
+  const PIXELS_PER_SECOND = 46;
+
   const timeline = createTimeline({
     stage,
     viewport,
-    duration: 72_000,
+    duration: 72_000, // replaced below once the canvas has been measured
     reducedMotion,
   });
 
@@ -127,6 +150,11 @@ function boot() {
     if (started) return;
     started = true;
     timeline.measure();
+    // Derive the duration from the measured canvas so editing copy or
+    // swapping photography keeps the reading pace constant.
+    if (timeline.travel > 0) {
+      timeline.setDuration((timeline.travel / PIXELS_PER_SECOND) * 1000);
+    }
     setupReveals(stage, timeline, viewport);
     if (!reducedMotion) timeline.play();
   };
@@ -163,6 +191,7 @@ function boot() {
     audio: $("#bgm"),
     toggle: $("#music-toggle"),
     src: wedding.music.src,
+    ready: wedding.music.ready,
     title: wedding.music.title,
     // If a real track is supplied, pace the canvas to its length so the
     // invitation and the music finish together.
@@ -183,9 +212,15 @@ function boot() {
 
   const rsvpScene = $("#scene-rsvp");
   if (rsvpScene) {
-    // offsetTop is relative to #stage (its offset parent) and is not
-    // affected by the stage transform, so it stays valid as we move.
-    timeline.stopAt(() => rsvpScene.offsetTop - viewport.clientHeight * 0.55);
+    // Park so the whole form sits centred in the viewport — heading at the
+    // top, submit comfortably above the fold — rather than at an arbitrary
+    // fraction that leaves the title stranded low on the screen.
+    // offsetTop is relative to #stage and is unaffected by its transform,
+    // so this stays correct as the canvas moves.
+    timeline.stopAt(() => {
+      const slack = Math.max(0, viewport.clientHeight - rsvpScene.offsetHeight);
+      return rsvpScene.offsetTop - slack / 2;
+    });
   }
 
   setupRsvp({ wedding, timeline, live });

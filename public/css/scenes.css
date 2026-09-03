@@ -138,39 +138,60 @@
    Scene 1 — Cover
    ============================================================ */
 
+/* The cover is a single plate: photograph edge-to-edge, type laid over
+   it. The scene is exactly one screen tall so the opening frame is
+   fully composed rather than half-scrolled. */
 #scene-cover {
-  padding-top: calc(0.72rem + env(safe-area-inset-top));
-  padding-bottom: 0.9rem;
+  position: relative;
+  height: 100dvh;
+  min-height: 14.4rem;
+  overflow: hidden;
 }
 
-.cover__title {
-  margin-bottom: 0.34rem;
-}
-
-.cover__welcome {
-  margin-bottom: 0.22rem;
-}
-
-.cover__date {
-  margin-bottom: 0.5rem;
-}
-
-/* Full-bleed hero. Deliberately edge-to-edge and un-rounded —
-   the reference lets photography touch the canvas edges. */
 .cover__photo {
+  position: absolute;
+  inset: 0;
   width: 10rem;
-  aspect-ratio: var(--ratio, 825 / 1000);
+  height: 100%;
 }
 
-/* A soft downward vignette so the following type sits cleanly. */
+/* Top-anchored so faces sit in frame rather than being centre-cropped
+   out of it when a tall photograph is supplied. */
+.cover__photo > img {
+  object-position: 50% 32%;
+}
+
+/* Scrim: keeps the overlaid title legible over any photograph without
+   flattening the image the way a full overlay would. */
 .cover__photo::after {
   content: "";
   position: absolute;
-  inset: auto 0 0 0;
-  height: 22%;
-  background: linear-gradient(to bottom, transparent, var(--background));
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.82) 0%,
+    rgba(255, 255, 255, 0.42) 18%,
+    rgba(255, 255, 255, 0) 38%,
+    rgba(255, 255, 255, 0) 72%,
+    rgba(255, 255, 255, 0.55) 92%,
+    var(--background) 100%
+  );
   pointer-events: none;
   z-index: 1;
+}
+
+.cover__type {
+  position: absolute;
+  inset: calc(1.1rem + env(safe-area-inset-top)) 0 auto 0;
+  z-index: 2;
+}
+
+.cover__title {
+  margin-bottom: 0.3rem;
+}
+
+.cover__welcome {
+  margin-bottom: 0.2rem;
 }
 
 /* ============================================================
@@ -178,11 +199,11 @@
    ============================================================ */
 
 #scene-names {
-  padding: 0.62rem 0 0.78rem;
+  padding: 0.5rem 0 0.6rem;
 }
 
 .names__seal {
-  margin-bottom: 0.46rem;
+  margin-bottom: 0.36rem;
 }
 
 .names__zh {
@@ -213,7 +234,7 @@
 }
 
 .names__rule {
-  margin-top: 0.56rem;
+  margin-top: 0.42rem;
 }
 
 /* ============================================================
@@ -221,7 +242,7 @@
    ============================================================ */
 
 #scene-poem {
-  padding: 0.4rem 0 0.8rem;
+  padding: 0.3rem 0 0.55rem;
 }
 
 .poem__heading {
@@ -235,7 +256,7 @@
 }
 
 .poem__lines {
-  margin-top: 0.42rem;
+  margin-top: 0.32rem;
 }
 
 .poem__motif {
@@ -252,17 +273,18 @@
    ============================================================ */
 
 #scene-portrait {
-  padding: 0.32rem 0 0.8rem;
+  padding: 0.28rem 0 0.55rem;
 }
 
 .portrait__row {
   display: grid;
-  /* Asymmetric: the photo sits right of centre, flanked by a
-     vertical label column and a hairline. */
-  grid-template-columns: 1.38rem 5.9rem 1.38rem;
+  /* Asymmetric: the photograph is offset from centre and flanked by a
+     vertical label column and a hairline, so the composition reads as
+     a spread rather than a centred block. */
+  grid-template-columns: 1.25rem 6.9rem 1.25rem;
   justify-content: center;
   align-items: stretch;
-  gap: 0.32rem;
+  gap: 0.24rem;
 }
 
 .portrait__photo {
@@ -311,7 +333,7 @@
    ============================================================ */
 
 #scene-story {
-  padding: 0.4rem 0 0.8rem;
+  padding: 0.3rem 0 0.55rem;
 }
 
 .story__head {
@@ -356,14 +378,14 @@
 }
 
 .story__photo {
-  width: 2.67rem;
-  margin: 0.62rem auto 0;
+  width: 4.2rem;
+  margin: 0.5rem auto 0;
   border-radius: 50%;
   aspect-ratio: var(--ratio, 1 / 1);
 }
 
 .story__badge {
-  margin-top: 0.34rem;
+  margin-top: 0.28rem;
   font-family: var(--font-serif-zh);
   font-size: 0.427rem;
   line-height: var(--lh-tight);
@@ -377,7 +399,7 @@
 }
 
 .story__invite {
-  margin-top: 0.5rem;
+  margin-top: 0.4rem;
   font-family: var(--font-serif-zh);
   font-size: var(--fs-name-zh);
   line-height: var(--lh-double);
@@ -387,7 +409,7 @@
 }
 
 .story__letter {
-  margin-top: 0.5rem;
+  margin-top: 0.4rem;
 }
 
 .story__caption {
@@ -401,8 +423,11 @@
    Scene 6 — Full-bleed landscape
    ============================================================ */
 
+/* A wide photograph interrupts the text-heavy middle of the invitation.
+   It is deliberately given the full canvas width and no padding on the
+   sides — the pacing depends on this being a clean visual break. */
 #scene-landscape {
-  padding: 0.24rem 0 0.72rem;
+  padding: 0.2rem 0 0.5rem;
 }
 
 .landscape__photo {
@@ -415,7 +440,7 @@
    ============================================================ */
 
 #scene-time {
-  padding: 0.24rem 0 0.8rem;
+  padding: 0.2rem 0 0.6rem;
 }
 
 .time__mark {
@@ -436,7 +461,7 @@
 }
 
 .time__quote {
-  margin-top: 0.5rem;
+  margin-top: 0.4rem;
 }
 
 /* ---- Calendar ----------------------------------------------
@@ -444,7 +469,7 @@
 
 .calendar {
   width: 6.5rem;
-  margin: 0.56rem auto 0;
+  margin: 0.44rem auto 0;
   color: var(--calendar-ink);
 }
 
@@ -564,7 +589,7 @@
   align-items: flex-start;
   justify-content: center;
   gap: 0.42rem;
-  margin-top: 0.62rem;
+  margin-top: 0.5rem;
 }
 
 .countdown__unit {
@@ -642,7 +667,7 @@
   display: flex;
   justify-content: center;
   gap: 0.5rem;
-  margin-top: 0.56rem;
+  margin-top: 0.44rem;
 }
 
 .action {
@@ -688,12 +713,12 @@
    ============================================================ */
 
 #scene-venue {
-  padding: 0.32rem 0 0.8rem;
+  padding: 0.28rem 0 0.55rem;
 }
 
 .venue__photo {
   width: 10rem;
-  margin-top: 0.5rem;
+  margin-top: 0.34rem;
   aspect-ratio: var(--ratio, 1110 / 1000);
 }
 
@@ -719,8 +744,44 @@
    Scene 9 — Closing
    ============================================================ */
 
+/* Closing plate: photograph behind, words over it. */
 #scene-closing {
-  padding: 0.5rem 0 0.8rem;
+  position: relative;
+  padding: 1.15rem 0 1.05rem;
+  overflow: hidden;
+}
+
+.closing__photo {
+  position: absolute;
+  inset: 0;
+  width: 10rem;
+  height: 100%;
+}
+
+.closing__photo > img {
+  object-position: 50% 40%;
+}
+
+/* Softer than the cover scrim: this text block is denser, so it needs
+   more cover, but the photograph must still read as a photograph. */
+.closing__photo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    var(--background) 0%,
+    rgba(255, 255, 255, 0.86) 14%,
+    rgba(255, 255, 255, 0.78) 50%,
+    rgba(255, 255, 255, 0.86) 86%,
+    var(--background) 100%
+  );
+  pointer-events: none;
+}
+
+.closing__type {
+  position: relative;
+  z-index: 1;
 }
 
 .closing__poem {
@@ -732,7 +793,7 @@
 }
 
 .closing__thanks {
-  margin-top: 0.7rem;
+  margin-top: 0.55rem;
   font-family: var(--font-serif-zh);
   font-size: var(--fs-heading-sm);
   line-height: var(--lh-double);
@@ -753,8 +814,24 @@
    Scene 10 — RSVP
    ============================================================ */
 
+/* The final chapter. The canvas ends here, so this scene's height sets
+   the closing composition: it fills the viewport exactly, which puts the
+   heading near the top of the last frame instead of stranding it low
+   with dead space above.
+
+   The ask (heading + deadline + form) and the thank-you are siblings in
+   a centred column, so when one is hidden the other centres itself
+   rather than inheriting the hidden element's position. */
 #scene-rsvp {
-  padding: 0.5rem 0 calc(1.4rem + env(safe-area-inset-bottom));
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0.9rem 0 calc(0.9rem + env(safe-area-inset-bottom));
+}
+
+.rsvp__ask[hidden] {
+  display: none;
 }
 
 .rsvp__deadline {
@@ -768,7 +845,7 @@
 
 .rsvp__form {
   width: var(--field-w);
-  margin: 0.56rem auto 0;
+  margin: 0.44rem auto 0;
 }
 
 .field {
@@ -939,10 +1016,13 @@ textarea.field__control {
   display: none;
 }
 
-/* Inline success — restrained, replaces the form in place. */
+/* Inline success — restrained, replaces the form in place. The scene is
+   a centred flex column, so with the heading, deadline and form all
+   hidden this becomes the only child and centres itself in the final
+   frame. No top margin, or it would be pushed off-centre. */
 .rsvp__success {
   width: var(--field-w);
-  margin: 0.56rem auto 0;
+  margin: 0 auto;
   text-align: center;
 }
 
