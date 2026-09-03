@@ -375,25 +375,5 @@ invitations.patch("/:invitationId", async (c) => {
   return ok({});
 });
 
-/**
- * Publishing and unpublishing land here in WS5, which owns the revision
- * snapshot and the atomic flip. The routes exist now so WS3's isolation
- * matrix can prove they are unreachable across a tenant boundary.
- */
-invitations.post("/:invitationId/publish", async (c) => {
-  await requireInvitation(c.req.raw, c.env, c.req.param("invitationId"));
-  return fail("not_built", 501);
-});
-
-invitations.post("/:invitationId/unpublish", async (c) => {
-  const access = await requireInvitation(c.req.raw, c.env, c.req.param("invitationId"));
-
-  await c.env.DB.prepare(
-    `UPDATE invitations SET status = 'unpublished', updated_at = ?
-     WHERE id = ? AND status = 'published'`
-  )
-    .bind(nowMs(), access.invitationId)
-    .run();
-
-  return ok({});
-});
+// Draft, publish, unpublish, revisions, diff and preview live in
+// routes/publish.ts, mounted on this same prefix.

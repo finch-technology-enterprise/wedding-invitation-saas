@@ -24,6 +24,7 @@ import { AccessError } from "./lib/authz.js";
 import { auth } from "./routes/auth.js";
 import { invitations, tenants } from "./routes/tenants.js";
 import { media } from "./routes/media.js";
+import { publish } from "./routes/publish.js";
 import { serveMedia } from "./routes/deliver.js";
 import { handleLegacyList, handleLegacyRsvp, logFailure } from "./routes/legacy.js";
 
@@ -48,8 +49,9 @@ v1.route("/invitations", invitations);
 // Media hangs off the invitation it belongs to, so it mounts on the same
 // prefix and resolves ownership through the same requireInvitation check.
 v1.route("/invitations", media);
+v1.route("/invitations", publish);
 
-// WS5+ own: revisions, rsvp, platform.
+// WS8+ own: rsvp configuration, platform operator API.
 v1.all("/*", (c) => fail("not_built", 501));
 
 async function servePlatformAdmin(): Promise<Response> {

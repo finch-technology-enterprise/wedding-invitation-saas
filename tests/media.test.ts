@@ -408,6 +408,12 @@ describe("public delivery and draft protection", () => {
     const { asset } = await body<{ asset: { id: string } }>(await upload(alice, jpeg()));
     const bobAsset = await body<{ asset: { id: string } }>(await upload(bob, jpeg()));
 
+    // Preview access is scoped to assets the draft actually references
+    // (WS5), so the draft must point at the asset for the token to help.
+    await env.DB.prepare("UPDATE invitations SET draft_json = ? WHERE id = ?")
+      .bind(JSON.stringify({ media: { hero: { assetId: asset.id } } }), alice.invitationId)
+      .run();
+
     const token = "preview-token-value";
     const hash = [
       ...new Uint8Array(
@@ -433,6 +439,10 @@ describe("public delivery and draft protection", () => {
 
   test("an expired preview token does not unlock anything", async () => {
     const { asset } = await body<{ asset: { id: string } }>(await upload(alice, jpeg()));
+    await env.DB.prepare("UPDATE invitations SET draft_json = ? WHERE id = ?")
+      .bind(JSON.stringify({ media: { hero: { assetId: asset.id } } }), alice.invitationId)
+      .run();
+
     const token = "expired-token";
     const hash = [
       ...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token))),

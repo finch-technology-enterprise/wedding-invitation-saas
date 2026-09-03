@@ -274,14 +274,17 @@ media.delete("/:invitationId/media/:assetId", async (c) => {
     .first<{ id: string; storageKey: string; byteSize: number }>();
   if (!asset) return fail("not_found", 404);
 
-  const published = await c.env.DB.prepare(
-    `SELECT r.id FROM invitations i
-     JOIN invitation_revisions r ON r.id = i.published_revision_id
-     WHERE i.id = ? AND r.media_manifest_json LIKE ?`
+  // Protected if referenced by ANY retained revision, not merely the live
+  // one. Deleting the bytes behind a historical revision would make that
+  // revision unreproducible, which defeats the point of keeping it.
+  const referenced = await c.env.DB.prepare(
+    `SELECT id FROM invitation_revisions
+     WHERE invitation_id = ? AND media_manifest_json LIKE ?
+     LIMIT 1`
   )
     .bind(access.invitationId, `%"${assetId}"%`)
     .first<{ id: string }>();
-  if (published) return fail("asset_published", 409);
+  if (referenced) return fail("asset_published", 409);
 
   await c.env.DB.batch([
     c.env.DB.prepare("DELETE FROM media_assets WHERE id = ?").bind(assetId),

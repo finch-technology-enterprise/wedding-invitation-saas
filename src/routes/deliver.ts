@@ -35,7 +35,7 @@ async function loadAsset(env: Env, assetId: string): Promise<AssetRow | null> {
     .first<AssetRow>();
 }
 
-/** Published assets are listed in the revision's media manifest. */
+/** Published assets are listed in the live revision's media manifest. */
 async function isPublished(env: Env, assetId: string, invitationId: string): Promise<boolean> {
   const row = await env.DB.prepare(
     `SELECT 1 AS hit FROM invitations i
@@ -47,24 +47,43 @@ async function isPublished(env: Env, assetId: string, invitationId: string): Pro
   return row !== null;
 }
 
-/** A valid preview token grants access to that invitation's draft assets. */
+/**
+ * A preview token grants access only to assets the previewed draft
+ * actually references. Holding a token for an invitation is not blanket
+ * permission to fetch every asset ever uploaded to it.
+ */
 async function hasPreviewAccess(
   req: Request,
   env: Env,
-  invitationId: string
+  invitationId: string,
+  assetId: string
 ): Promise<boolean> {
   const url = new URL(req.url);
   const token = url.searchParams.get("preview");
   if (!token) return false;
 
   const row = await env.DB.prepare(
-    `SELECT invitation_id AS invitationId FROM preview_tokens
-     WHERE token_hash = ? AND expires_at > ?`
+    `SELECT i.draft_json AS draftJson, p.invitation_id AS invitationId
+     FROM preview_tokens p
+     JOIN invitations i ON i.id = p.invitation_id
+     WHERE p.token_hash = ? AND p.expires_at > ?`
   )
     .bind(await hashToken(token), nowMs())
-    .first<{ invitationId: string }>();
+    .first<{ draftJson: string | null; invitationId: string }>();
 
-  return row?.invitationId === invitationId;
+  // Token must be for this invitation...
+  if (!row || row.invitationId !== invitationId || !row.draftJson) return false;
+
+  // ...and the draft must actually reference this asset.
+  try {
+    const config = JSON.parse(row.draftJson) as Record<string, any>;
+    for (const entry of Object.values(config.media ?? {})) {
+      if ((entry as { assetId?: string | null })?.assetId === assetId) return true;
+    }
+    return config.music?.assetId === assetId;
+  } catch {
+    return false;
+  }
 }
 
 /** Tenant members may view their own draft assets in the admin UI. */
@@ -88,7 +107,7 @@ export async function serveMedia(req: Request, env: Env, assetId: string): Promi
 
   const allowed =
     (await isPublished(env, assetId, asset.invitationId)) ||
-    (await hasPreviewAccess(req, env, asset.invitationId)) ||
+    (await hasPreviewAccess(req, env, asset.invitationId, assetId)) ||
     (await hasTenantAccess(req, env, asset.tenantId));
 
   // A draft asset is reported as missing, not forbidden: a 403 would
