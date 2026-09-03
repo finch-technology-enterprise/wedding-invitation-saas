@@ -17,12 +17,15 @@ The invitation never scrolls. A fixed one-screen viewport clips a long
 canvas that drifts upward at a fixed reading pace, can be dragged, and
 stops when it reaches the reply form.
 
-**Live example:** [wedding-invite-test.johnlee-my.workers.dev/i/lee-law](https://wedding-invite-test.johnlee-my.workers.dev/i/lee-law)
+**Live demo:** [wedding-invite-test.johnlee-my.workers.dev/i/demo](https://wedding-invite-test.johnlee-my.workers.dev/i/demo)
 
-> A single published invitation, running on the hosted deployment. It is a
-> demonstration, not a service with an availability guarantee, and hosted
-> signup is not open to the public yet. To use this today, self-host it —
-> that path is fully supported and documented.
+> A published invitation with fictional content, running on the hosted
+> deployment. Replies are disabled on the demo.
+>
+> This is a demonstration, not a service with an availability guarantee.
+> **Hosted signup is not open** — there is no public SaaS to register for
+> yet. To use this today, self-host it: that path is fully supported,
+> documented, and needs nothing from anyone else's infrastructure.
 
 ---
 
@@ -101,7 +104,7 @@ Full walkthrough, including local development against a local D1 and R2:
 | Object storage | R2 |
 | Public invitation | Plain ES modules, **no dependencies** |
 | Admin consoles | React, Vite, Mantine, TanStack Query, React Router |
-| Email | Cloudflare Email Service or Resend, both optional |
+| Email | Cloudflare Email Service or Resend — optional |
 | Tests | Vitest (Workers pool) + Playwright |
 
 The guest-facing invitation ships zero runtime dependencies, and a test
@@ -111,6 +114,11 @@ milliseconds to render a fixed composition.
 
 Authentication is scrypt password hashing with opaque server-side
 sessions in `__Host-` cookies. See **[SECURITY.md](SECURITY.md)**.
+
+Password reset and email verification need a mail provider. Without one
+the platform still runs — self-hosted mode does not require verification —
+you simply cannot offer self-service password recovery. The public demo
+above runs without email configured.
 
 ---
 
