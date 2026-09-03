@@ -6,7 +6,7 @@
  * behaviour lives in the modules it imports.
  */
 
-import { wedding } from "./content.js";
+import { buildConfig, readBootstrap } from "./config.js";
 import { loadChineseFonts } from "./fonts.js";
 import { $, $$ } from "./dom.js";
 import { parseWeddingDate, weddingParts, formatDottedDate, buildIcsUrl } from "./datetime.js";
@@ -88,6 +88,11 @@ function setupReveals(root, timeline, viewport) {
    --------------------------------------------------------------- */
 
 function boot() {
+  // Configuration arrives inlined by the Worker (published revision or
+  // preview draft). Falls back to the theme defaults when opened without
+  // a bootstrap, so the theme remains runnable on its own.
+  const { wedding, meta } = buildConfig(readBootstrap());
+
   // Request the CJK subsets first: the sooner they start, the smaller the
   // window in which fallback metrics are on screen.
   loadChineseFonts(wedding);
@@ -127,7 +132,10 @@ function boot() {
   //
   // A supplied soundtrack overrides this: setDuration() retimes the
   // canvas to the track so the two finish together.
-  const PIXELS_PER_SECOND = 46;
+  //
+  // Configurable within the theme's narrow published range; absent a
+  // value this is exactly the accepted rate.
+  const PIXELS_PER_SECOND = meta.driftPxPerSec ?? 46;
 
   const timeline = createTimeline({
     stage,

@@ -3,18 +3,24 @@
  *
  * `wrangler dev` watches the filesystem and hot-reloads, which drops
  * connections partway through a long Playwright run. The browser suite
- * only needs the static frontend plus a stub for POST /api/rsvp, so it
- * runs against this instead. Worker/API behaviour is covered by the
- * Vitest suite, which exercises the real Worker.
+ * only needs the theme shell plus an RSVP stub, so it runs against this
+ * instead. Worker/API behaviour is covered by the Vitest suite, which
+ * exercises the real Worker.
+ *
+ * This mirrors the Worker's /i/{slug} contract: it serves the theme shell
+ * with the demo fixture inlined at the <!--BOOTSTRAP--> marker, so the
+ * browser sees exactly the delivery mechanism production uses.
  */
 
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
+import { DEMO_BOOTSTRAP, DEMO_SLUG } from "./fixture.mjs";
 
 const ROOT = fileURLToPath(new URL("../../public", import.meta.url));
 const PORT = Number(process.env.PORT || 8789);
+const SHELL = "/themes/cinematic-classic/index.html";
 
 const TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -30,6 +36,22 @@ const TYPES = {
   ".m4a": "audio/mp4",
   ".mp3": "audio/mpeg",
 };
+
+/** Same escaping the Worker applies before inlining. */
+function safeJson(value) {
+  return JSON.stringify(value)
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/\u2028/g, "\\u2028")
+    .replace(/\u2029/g, "\\u2029");
+}
+
+async function renderInvitation(res, bootstrap) {
+  const html = await readFile(join(ROOT, SHELL), "utf8");
+  const inline = `<script>window.__INVITATION__=${safeJson(bootstrap)}</script>`;
+  res.writeHead(200, { "content-type": TYPES[".html"] });
+  res.end(html.replace("<!--BOOTSTRAP-->", inline));
+}
 
 createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);
@@ -58,7 +80,13 @@ createServer(async (req, res) => {
     return;
   }
 
-  const rel = normalize(path === "/" ? "/index.html" : path).replace(/^(\.\.[/\\])+/, "");
+  // The public invitation route, and `/` as a convenience alias for it.
+  if (path === "/" || path === `/i/${DEMO_SLUG}`) {
+    await renderInvitation(res, DEMO_BOOTSTRAP);
+    return;
+  }
+
+  const rel = normalize(path).replace(/^(\.\.[/\\])+/, "");
   const file = join(ROOT, rel);
 
   try {

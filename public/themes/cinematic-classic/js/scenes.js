@@ -62,6 +62,10 @@ function photo(slot, className, label) {
     decoding: "async",
     loading: "eager",
   });
+  // Focal point, when the published config supplies one. Left unset
+  // otherwise so the stylesheet's own object-position keeps applying —
+  // the frozen default is not restated here.
+  if (slot.position) img.style.objectPosition = slot.position;
   // Fade in on decode so a slow image does not pop into the composition.
   img.addEventListener("load", () => {
     frame.classList.add("is-filled");

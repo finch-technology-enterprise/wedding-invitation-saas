@@ -1,14 +1,17 @@
 // ============================================================
-//  EDIT THIS FILE to personalise the invitation.
+//  THEME DEFAULTS — cinematic-classic
 //
-//  This is the SINGLE SOURCE OF TRUTH for the wedding.
-//  Nothing here should be duplicated in HTML, CSS or other JS.
+//  Invitation content is no longer edited here: it comes from the
+//  published revision, injected as bootstrap JSON and merged over this
+//  object by config.js.
 //
-//  `wedding.date` drives:  cover date · Chinese date line · weekday
-//                          calendar · countdown · .ics download
+//  This file now serves two purposes:
+//    1. the shape and fallback values the renderer expects, so a config
+//       that omits an optional field still renders the accepted design
+//    2. the labels and micro-copy that are part of the composition
 //
-//  Photography → public/assets/photos/   (see `photos` below)
-//  Music       → public/assets/audio/    (see `music` below)
+//  The values below are exactly those of the accepted baseline
+//  (c2833d2), which is what lets the demo fixture reproduce it.
 // ============================================================
 
 export const wedding = {

@@ -26,6 +26,7 @@ import { invitations, tenants } from "./routes/tenants.js";
 import { media } from "./routes/media.js";
 import { publish } from "./routes/publish.js";
 import { serveMedia } from "./routes/deliver.js";
+import { serveInvitation, servePreview } from "./routes/invite.js";
 import { handleLegacyList, handleLegacyRsvp, logFailure } from "./routes/legacy.js";
 
 // basePath: the Worker forwards the untouched request, so routes below
@@ -109,12 +110,12 @@ export default {
 
     if (path === "/i/" || path.startsWith("/i/")) {
       if (req.method !== "GET") return fail("method_not_allowed", 405);
-      return fail("invitation_not_found", 404);
+      return serveInvitation(req, env, path.slice("/i/".length));
     }
 
     if (path === "/preview/" || path.startsWith("/preview/")) {
       if (req.method !== "GET") return fail("method_not_allowed", 405);
-      return fail("preview_not_found", 404);
+      return servePreview(req, env, path.slice("/preview/".length));
     }
 
     if (path === "/media/" || path.startsWith("/media/")) {
