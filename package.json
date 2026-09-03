@@ -1,6 +1,6 @@
 {
   "name": "invitation-platform",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "A cinematic wedding-invitation platform on Cloudflare Workers, D1 and R2. Self-hostable, multi-tenant, with a frozen dependency-free public renderer.",
   "license": "Apache-2.0",
   "private": true,
@@ -14,6 +14,17 @@
     "self-hosted",
     "hono"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/my-johnlee/invitation-platform.git"
+  },
+  "homepage": "https://github.com/my-johnlee/invitation-platform#readme",
+  "bugs": {
+    "url": "https://github.com/my-johnlee/invitation-platform/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "wrangler dev",
     "dev:admin": "vite",
