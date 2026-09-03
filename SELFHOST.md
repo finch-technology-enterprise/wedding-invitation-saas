@@ -192,3 +192,16 @@ throttled per IP and per account. Wait, or clear the bucket locally with
 **A deep link like `/admin/invitations/x/media` 404s.** `run_worker_first`
 in `wrangler.jsonc` is missing its `/admin/*` entries; copy that block
 from `wrangler.jsonc.example`.
+
+**`wrangler d1 migrations` fails with "More than one account available"
+or error 7403.** Your Cloudflare login can reach several accounts, and
+the migrations subcommand does not always pick up `account_id` from
+`wrangler.jsonc`. Name the account explicitly:
+
+```sh
+CLOUDFLARE_ACCOUNT_ID=<your-account-id> \
+  npx wrangler d1 migrations apply invite-platform --remote
+```
+
+`npx wrangler whoami` lists the account IDs you can use. Single-account
+logins are unaffected.
