@@ -18,6 +18,7 @@ import { isSameOrigin } from "../lib/guard.js";
 import { requireInvitation } from "../lib/authz.js";
 import { hashToken } from "../lib/session.js";
 import { MANIFEST, validateConfig, type ValidatedConfig } from "../themes/cinematic-classic.js";
+import { snapshotForm } from "./rsvp.js";
 
 export const publish = new Hono<{ Bindings: Env }>();
 
@@ -182,6 +183,13 @@ publish.post("/:invitationId/publish", async (c) => {
   const body = await readJson(c);
   const note = typeof body?.note === "string" ? body.note.slice(0, 200) : null;
 
+  // Pin the RSVP schema into the revision. Guests must be validated
+  // against the form they were actually shown, so editing the form
+  // afterwards cannot retroactively invalidate replies to the live
+  // version — the draft only takes effect on the next publish.
+  const rsvpForm = await snapshotForm(c.env, access.invitationId);
+  const publishedConfig = { ...result.config!, rsvpForm };
+
   // The manifest lists exactly the assets this revision needs, which is
   // what authorizes guest media access and what cleanup accounting reads.
   const manifest = result.assetIds ?? [];
@@ -194,7 +202,7 @@ publish.post("/:invitationId/publish", async (c) => {
     ).bind(
       revisionId,
       access.invitationId,
-      JSON.stringify(result.config),
+      JSON.stringify(publishedConfig),
       JSON.stringify(manifest),
       access.auth.user.id,
       now,

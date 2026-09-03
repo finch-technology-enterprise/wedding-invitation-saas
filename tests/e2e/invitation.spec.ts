@@ -510,7 +510,7 @@ test.describe("rsvp", () => {
     await page.locator("#rsvp-phone").fill("+60123456789");
 
     const [response] = await Promise.all([
-      page.waitForResponse((r) => r.url().includes("/api/rsvp")),
+      page.waitForResponse((r) => r.url().includes("/rsvp")),
       page.locator("#rsvp-submit").click(),
     ]);
 
@@ -520,7 +520,7 @@ test.describe("rsvp", () => {
   });
 
   test("reports a server failure visibly instead of failing silently", async ({ page }) => {
-    await page.route("**/api/rsvp", (route) =>
+    await page.route("**/i/*/rsvp", (route) =>
       route.fulfill({
         status: 500,
         contentType: "application/json",

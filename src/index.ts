@@ -2,19 +2,21 @@
  * Platform Worker.
  *
  * Routing (see arch report §D):
- *   /api/v1/*          versioned platform API (Hono sub-app; WS2+)
- *   /api/rsvp|/api/rsvps  legacy single-invitation routes (WS0–WS5 only;
- *                         retired when the frozen frontend is extracted)
- *   /i/{slug}          public invitation (WS5/WS6)
- *   /preview/{token}   draft preview (WS5)
+ *   /api/v1/*          versioned platform API (Hono sub-app)
+ *   /i/{slug}          public invitation
+ *   POST /i/{slug}/rsvp  public reply submission (scoped by slug, so a
+ *                      reply cannot land on another invitation)
+ *   /preview/{token}   draft preview
  *   /media/{assetId}   R2 delivery (WS4)
- *   /admin             tenant console, served statically as clean URL for
- *                      /admin.html (auth is API-enforced; the shell is inert
- *                      without a session). WS7 replaces the file.
+ *   /admin/*           tenant console (React SPA built by Vite into
+ *                      public/admin/). Deep links are served the same
+ *                      shell so client routing survives reload; auth is
+ *                      API-enforced, and the shell is inert without a
+ *                      session.
  *   /platform-admin    operator console (WS9 adds platform-admin.html, which
  *                      the same clean-URL rule then serves; until then the
  *                      Worker answers 501 on asset miss).
- *   everything else    Static Assets (frozen public invitation at / until WS6)
+ *   everything else    Static Assets
  */
 
 import { Hono } from "hono";
@@ -25,9 +27,13 @@ import { auth } from "./routes/auth.js";
 import { invitations, tenants } from "./routes/tenants.js";
 import { media } from "./routes/media.js";
 import { publish } from "./routes/publish.js";
+import { handlePublicRsvp, rsvp } from "./routes/rsvp.js";
 import { serveMedia } from "./routes/deliver.js";
 import { serveInvitation, servePreview } from "./routes/invite.js";
-import { handleLegacyList, handleLegacyRsvp, logFailure } from "./routes/legacy.js";
+// Structured failure logging for the versioned API.
+function logFailure(scope: string, err: unknown): void {
+  console.error(scope, err instanceof Error ? err.message : String(err));
+}
 
 // basePath: the Worker forwards the untouched request, so routes below
 // are matched against the full /api/v1/... path.
@@ -51,6 +57,7 @@ v1.route("/invitations", invitations);
 // prefix and resolves ownership through the same requireInvitation check.
 v1.route("/invitations", media);
 v1.route("/invitations", publish);
+v1.route("/invitations", rsvp);
 
 // WS8+ own: rsvp configuration, platform operator API.
 v1.all("/*", (c) => fail("not_built", 501));
@@ -70,35 +77,38 @@ export default {
       return v1.fetch(req, env);
     }
 
-    // --- legacy single-invitation API (behaviour frozen until WS6) ---
-    if (path === "/api/rsvp") {
-      if (req.method !== "POST") return json({ ok: false, error: "method_not_allowed" }, 405);
-      try {
-        return await handleLegacyRsvp(req, env);
-      } catch (err) {
-        logFailure("POST /api/rsvp", err);
-        return json({ ok: false, error: "server_error" }, 500);
-      }
-    }
-
-    if (path === "/api/rsvps") {
-      if (req.method !== "GET") return json({ ok: false, error: "method_not_allowed" }, 405);
-      try {
-        return await handleLegacyList(req, env);
-      } catch (err) {
-        logFailure("GET /api/rsvps", err);
-        return json({ ok: false, error: "server_error" }, 500);
-      }
-    }
-
     if (path === "/api/v1" || path === "/api/v1/") {
       return ok({ version: "v1", mode: deploymentMode(env) });
     }
 
+    // --- tenant console ---
+    // A single-page app: every /admin/* path must return the same shell,
+    // or a reload on a deep link would 404 against Static Assets. Real
+    // files (JS, CSS) are matched first so they are not shadowed.
+    if (path === "/admin" || path.startsWith("/admin/")) {
+      if (req.method !== "GET" && req.method !== "HEAD") {
+        return fail("method_not_allowed", 405);
+      }
+      if (!path.startsWith("/admin/assets/")) {
+        const shell = new URL(req.url);
+        shell.pathname = "/admin/index.html";
+        shell.search = "";
+        const res = await env.ASSETS.fetch(new Request(shell.toString(), { method: "GET" }));
+        if (res.ok) {
+          const headers = new Headers(res.headers);
+          headers.set("content-type", "text/html; charset=utf-8");
+          // The console is authenticated; keep it out of search results
+          // and shared caches.
+          headers.set("x-robots-tag", "noindex, nofollow");
+          headers.set("cache-control", "no-cache");
+          return new Response(res.body, { status: 200, headers });
+        }
+        return fail("admin_not_built", 501);
+      }
+      // Fall through to Static Assets for hashed bundle files.
+    }
+
     // --- platform surfaces (stubs until their workstreams) ---
-    // Note: /admin is served statically (clean URL for /admin.html) and
-    // never reaches the Worker. Only the not-yet-built platform console
-    // needs a Worker answer (asset miss falls through to here).
     if (path === "/platform-admin") {
       if (req.method !== "GET") return fail("method_not_allowed", 405);
       return servePlatformAdmin();
@@ -109,8 +119,17 @@ export default {
     }
 
     if (path === "/i/" || path.startsWith("/i/")) {
+      const rest = path.slice("/i/".length);
+
+      // POST /i/{slug}/rsvp — scoped by slug, so a reply can only land on
+      // the invitation whose page produced it.
+      if (rest.endsWith("/rsvp")) {
+        if (req.method !== "POST") return fail("method_not_allowed", 405);
+        return handlePublicRsvp(req, env, rest.slice(0, -"/rsvp".length));
+      }
+
       if (req.method !== "GET") return fail("method_not_allowed", 405);
-      return serveInvitation(req, env, path.slice("/i/".length));
+      return serveInvitation(req, env, rest);
     }
 
     if (path === "/preview/" || path.startsWith("/preview/")) {

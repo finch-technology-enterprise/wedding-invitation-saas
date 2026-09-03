@@ -332,6 +332,11 @@ function buildAllowedPaths(): Set<string> {
     "motion",
     "motion.driftPxPerSec",
     "copy",
+    // Pinned at publish time from the RSVP form definition. Declared here
+    // so a published config can be re-validated (or re-imported) without
+    // its own snapshot being reported as an unknown property. Its shape is
+    // owned and validated by lib/rsvp.ts, not by the theme.
+    "rsvpForm",
   ]);
 
   // Copy paths and their intermediate containers.
@@ -355,10 +360,12 @@ function buildAllowedPaths(): Set<string> {
 
 const ALLOWED_PATHS = buildAllowedPaths();
 
-/** Leaf paths whose value is opaque to the walk (arrays of strings, etc.). */
+/** Leaf paths whose value is opaque to the walk (arrays of strings, and
+ *  the RSVP snapshot, which has its own validator). */
 const LEAF_PATHS = new Set<string>([
   ...Object.keys(LIST_LIMITS),
   ...Object.keys(FIELD_LIMITS),
+  "rsvpForm",
 ]);
 
 /** Walk the supplied object and record every path the theme does not declare. */

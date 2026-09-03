@@ -344,7 +344,14 @@ function boot() {
     });
   }
 
-  setupRsvp({ wedding, timeline, live });
+  // Scoped to this invitation. A preview posts to its own slug too, so a
+  // shared draft link cannot be used to write into the live invitation.
+  setupRsvp({
+    wedding,
+    timeline,
+    live,
+    endpoint: meta.slug ? `/i/${meta.slug}/rsvp` : "/i/demo/rsvp",
+  });
 }
 
 if (document.readyState === "loading") {

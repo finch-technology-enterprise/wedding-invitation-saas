@@ -58,7 +58,7 @@ createServer(async (req, res) => {
   const path = url.pathname;
 
   // Mirror the Worker's RSVP contract closely enough for UI assertions.
-  if (path === "/api/rsvp") {
+  if (path === `/i/${DEMO_SLUG}/rsvp`) {
     if (req.method !== "POST") {
       res.writeHead(405, { "content-type": "application/json" });
       res.end(JSON.stringify({ ok: false, error: "method_not_allowed" }));

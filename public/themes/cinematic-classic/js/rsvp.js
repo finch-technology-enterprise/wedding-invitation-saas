@@ -1,24 +1,31 @@
 /**
  * RSVP form.
  *
- * Wire-compatible with the existing Worker (`POST /api/rsvp`) and with
- * the D1 schema, so `public/admin.html` keeps working unchanged.
- * The honeypot field is submitted exactly as the server expects.
+ * Submits to the invitation-scoped endpoint `POST /i/{slug}/rsvp`, so a
+ * reply can only ever land on the invitation whose page produced it. The
+ * honeypot field is submitted exactly as the server expects.
+ *
+ * Presentation belongs to the theme; the schema only decides what data is
+ * collected. Server validation is authoritative — the checks here exist
+ * to answer the guest immediately, not to be trusted.
  */
 
 import { $ } from "./dom.js";
-
-const ENDPOINT = "/api/rsvp";
 
 /** Map the server's error codes onto human copy. */
 function messageForError(code, copy) {
   switch (code) {
     case "invalid_name":
+    case "required":
       return copy.errors.name;
     case "contact_required":
     case "invalid_phone":
     case "invalid_instagram":
       return copy.errors.contact;
+    case "rsvp_closed":
+    case "rsvp_disabled":
+      // Replies are no longer being accepted; not the guest's fault.
+      return copy.errors.server;
     case "server_error":
       return copy.errors.server;
     default:
@@ -26,7 +33,7 @@ function messageForError(code, copy) {
   }
 }
 
-export function setupRsvp({ wedding, timeline, live }) {
+export function setupRsvp({ wedding, timeline, live, endpoint }) {
   const copy = wedding.copy.rsvp;
 
   const form = $("#rsvp-form");
@@ -129,9 +136,14 @@ export function setupRsvp({ wedding, timeline, live }) {
     submit.textContent = copy.submitting;
 
     try {
-      const res = await fetch(ENDPOINT, {
+      const res = await fetch(endpoint, {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          // Marks this as a scripted same-origin request for the
+          // Worker's CSRF check, which a cross-site form cannot forge.
+          "x-requested-with": "fetch",
+        },
         body: JSON.stringify(payload),
       });
 
