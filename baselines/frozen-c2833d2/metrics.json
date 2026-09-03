@@ -1,0 +1,514 @@
+{
+  "commit": "c2833d25aaf51466a258bcf712f16053f5af2eb6",
+  "capturedAt": "2026-09-03T01:13:40.898Z",
+  "viewports": {
+    "375": {
+      "width": 375,
+      "height": 812,
+      "firstRenderMs": 5440,
+      "requestCount": 15,
+      "requests": [
+        "/",
+        "/css/tokens.css",
+        "/css/base.css",
+        "/css/canvas.css",
+        "/css/scenes.css",
+        "/js/main.js",
+        "/js/content.js",
+        "/js/fonts.js",
+        "/js/dom.js",
+        "/js/datetime.js",
+        "/js/scenes.js",
+        "/js/timeline.js",
+        "/js/countdown.js",
+        "/js/audio.js",
+        "/js/rsvp.js"
+      ],
+      "sizes": {
+        "/": 2503,
+        "/css/tokens.css": 3710,
+        "/css/base.css": 1883,
+        "/css/canvas.css": 3410,
+        "/css/scenes.css": 23696,
+        "/js/main.js": 8414,
+        "/js/content.js": 7187,
+        "/js/fonts.js": 2299,
+        "/js/dom.js": 2046,
+        "/js/datetime.js": 3759,
+        "/js/scenes.js": 17262,
+        "/js/timeline.js": 11195,
+        "/js/countdown.js": 2969,
+        "/js/audio.js": 2754,
+        "/js/rsvp.js": 5050
+      },
+      "rem": 37.5,
+      "stageH": 4861,
+      "stageW": 375,
+      "viewportH": 812,
+      "viewportW": 375,
+      "scenes": [
+        {
+          "id": "scene-cover",
+          "offsetTop": 0,
+          "height": 812
+        },
+        {
+          "id": "scene-names",
+          "offsetTop": 812,
+          "height": 248
+        },
+        {
+          "id": "scene-poem",
+          "offsetTop": 1060,
+          "height": 297
+        },
+        {
+          "id": "scene-portrait",
+          "offsetTop": 1357,
+          "height": 420
+        },
+        {
+          "id": "scene-story",
+          "offsetTop": 1777,
+          "height": 649
+        },
+        {
+          "id": "scene-landscape",
+          "offsetTop": 2426,
+          "height": 291
+        },
+        {
+          "id": "scene-time",
+          "offsetTop": 2717,
+          "height": 497
+        },
+        {
+          "id": "scene-venue",
+          "offsetTop": 3214,
+          "height": 487
+        },
+        {
+          "id": "scene-closing",
+          "offsetTop": 3701,
+          "height": 348
+        },
+        {
+          "id": "scene-rsvp",
+          "offsetTop": 4049,
+          "height": 812
+        }
+      ],
+      "weights": [
+        {
+          "cls": "poem__heading reveal",
+          "w": "400"
+        },
+        {
+          "cls": "story__heading",
+          "w": "400"
+        },
+        {
+          "cls": "t-heading reveal",
+          "w": "400"
+        },
+        {
+          "cls": "t-heading reveal",
+          "w": "400"
+        },
+        {
+          "cls": "t-heading reveal",
+          "w": "400"
+        }
+      ],
+      "objPos": [],
+      "docScrolls": false,
+      "hOverflow": false,
+      "rsvpOffsetTop": 4049,
+      "rsvpH": 812,
+      "reveals": 7,
+      "countdownDigits": 8,
+      "stageOffsetAfter2_5s": -147.81
+    },
+    "390": {
+      "width": 390,
+      "height": 844,
+      "firstRenderMs": 5350,
+      "requestCount": 15,
+      "requests": [
+        "/",
+        "/css/tokens.css",
+        "/css/base.css",
+        "/css/canvas.css",
+        "/css/scenes.css",
+        "/js/main.js",
+        "/js/content.js",
+        "/js/fonts.js",
+        "/js/dom.js",
+        "/js/datetime.js",
+        "/js/scenes.js",
+        "/js/timeline.js",
+        "/js/countdown.js",
+        "/js/audio.js",
+        "/js/rsvp.js"
+      ],
+      "sizes": {
+        "/": 2503,
+        "/css/tokens.css": 3710,
+        "/css/base.css": 1883,
+        "/css/canvas.css": 3410,
+        "/css/scenes.css": 23696,
+        "/js/main.js": 8414,
+        "/js/content.js": 7187,
+        "/js/fonts.js": 2299,
+        "/js/dom.js": 2046,
+        "/js/datetime.js": 3759,
+        "/js/scenes.js": 17262,
+        "/js/timeline.js": 11195,
+        "/js/countdown.js": 2969,
+        "/js/audio.js": 2754,
+        "/js/rsvp.js": 5050
+      },
+      "rem": 39,
+      "stageH": 5054,
+      "stageW": 390,
+      "viewportH": 844,
+      "viewportW": 390,
+      "scenes": [
+        {
+          "id": "scene-cover",
+          "offsetTop": 0,
+          "height": 844
+        },
+        {
+          "id": "scene-names",
+          "offsetTop": 844,
+          "height": 258
+        },
+        {
+          "id": "scene-poem",
+          "offsetTop": 1102,
+          "height": 309
+        },
+        {
+          "id": "scene-portrait",
+          "offsetTop": 1411,
+          "height": 436
+        },
+        {
+          "id": "scene-story",
+          "offsetTop": 1847,
+          "height": 675
+        },
+        {
+          "id": "scene-landscape",
+          "offsetTop": 2523,
+          "height": 302
+        },
+        {
+          "id": "scene-time",
+          "offsetTop": 2825,
+          "height": 517
+        },
+        {
+          "id": "scene-venue",
+          "offsetTop": 3342,
+          "height": 507
+        },
+        {
+          "id": "scene-closing",
+          "offsetTop": 3848,
+          "height": 362
+        },
+        {
+          "id": "scene-rsvp",
+          "offsetTop": 4210,
+          "height": 844
+        }
+      ],
+      "weights": [
+        {
+          "cls": "poem__heading reveal",
+          "w": "400"
+        },
+        {
+          "cls": "story__heading",
+          "w": "400"
+        },
+        {
+          "cls": "t-heading reveal",
+          "w": "400"
+        },
+        {
+          "cls": "t-heading reveal",
+          "w": "400"
+        },
+        {
+          "cls": "t-heading reveal",
+          "w": "400"
+        }
+      ],
+      "objPos": [],
+      "docScrolls": false,
+      "hOverflow": false,
+      "rsvpOffsetTop": 4210,
+      "rsvpH": 844,
+      "reveals": 7,
+      "countdownDigits": 8,
+      "stageOffsetAfter2_5s": -164.92
+    },
+    "430": {
+      "width": 430,
+      "height": 932,
+      "firstRenderMs": 4631,
+      "requestCount": 15,
+      "requests": [
+        "/",
+        "/css/tokens.css",
+        "/css/base.css",
+        "/css/canvas.css",
+        "/css/scenes.css",
+        "/js/main.js",
+        "/js/content.js",
+        "/js/fonts.js",
+        "/js/dom.js",
+        "/js/datetime.js",
+        "/js/scenes.js",
+        "/js/timeline.js",
+        "/js/countdown.js",
+        "/js/audio.js",
+        "/js/rsvp.js"
+      ],
+      "sizes": {
+        "/": 2503,
+        "/css/tokens.css": 3710,
+        "/css/base.css": 1883,
+        "/css/canvas.css": 3410,
+        "/css/scenes.css": 23696,
+        "/js/main.js": 8414,
+        "/js/content.js": 7187,
+        "/js/fonts.js": 2299,
+        "/js/dom.js": 2046,
+        "/js/datetime.js": 3759,
+        "/js/scenes.js": 17262,
+        "/js/timeline.js": 11195,
+        "/js/countdown.js": 2969,
+        "/js/audio.js": 2754,
+        "/js/rsvp.js": 5050
+      },
+      "rem": 43,
+      "stageH": 5574,
+      "stageW": 430,
+      "viewportH": 932,
+      "viewportW": 430,
+      "scenes": [
+        {
+          "id": "scene-cover",
+          "offsetTop": 0,
+          "height": 932
+        },
+        {
+          "id": "scene-names",
+          "offsetTop": 932,
+          "height": 284
+        },
+        {
+          "id": "scene-poem",
+          "offsetTop": 1216,
+          "height": 341
+        },
+        {
+          "id": "scene-portrait",
+          "offsetTop": 1557,
+          "height": 481
+        },
+        {
+          "id": "scene-story",
+          "offsetTop": 2039,
+          "height": 743
+        },
+        {
+          "id": "scene-landscape",
+          "offsetTop": 2782,
+          "height": 333
+        },
+        {
+          "id": "scene-time",
+          "offsetTop": 3115,
+          "height": 569
+        },
+        {
+          "id": "scene-venue",
+          "offsetTop": 3684,
+          "height": 559
+        },
+        {
+          "id": "scene-closing",
+          "offsetTop": 4243,
+          "height": 399
+        },
+        {
+          "id": "scene-rsvp",
+          "offsetTop": 4642,
+          "height": 932
+        }
+      ],
+      "weights": [
+        {
+          "cls": "poem__heading reveal",
+          "w": "400"
+        },
+        {
+          "cls": "story__heading",
+          "w": "400"
+        },
+        {
+          "cls": "t-heading reveal",
+          "w": "400"
+        },
+        {
+          "cls": "t-heading reveal",
+          "w": "400"
+        },
+        {
+          "cls": "t-heading reveal",
+          "w": "400"
+        }
+      ],
+      "objPos": [],
+      "docScrolls": false,
+      "hOverflow": false,
+      "rsvpOffsetTop": 4642,
+      "rsvpH": 932,
+      "reveals": 7,
+      "countdownDigits": 8,
+      "stageOffsetAfter2_5s": -133.98
+    },
+    "desktop": {
+      "width": 1440,
+      "height": 900,
+      "firstRenderMs": 4997,
+      "requestCount": 15,
+      "requests": [
+        "/",
+        "/css/tokens.css",
+        "/css/base.css",
+        "/css/canvas.css",
+        "/css/scenes.css",
+        "/js/main.js",
+        "/js/content.js",
+        "/js/fonts.js",
+        "/js/dom.js",
+        "/js/datetime.js",
+        "/js/scenes.js",
+        "/js/timeline.js",
+        "/js/countdown.js",
+        "/js/audio.js",
+        "/js/rsvp.js"
+      ],
+      "sizes": {
+        "/": 2503,
+        "/css/tokens.css": 3710,
+        "/css/base.css": 1883,
+        "/css/canvas.css": 3410,
+        "/css/scenes.css": 23696,
+        "/js/main.js": 8414,
+        "/js/content.js": 7187,
+        "/js/fonts.js": 2299,
+        "/js/dom.js": 2046,
+        "/js/datetime.js": 3759,
+        "/js/scenes.js": 17262,
+        "/js/timeline.js": 11195,
+        "/js/countdown.js": 2969,
+        "/js/audio.js": 2754,
+        "/js/rsvp.js": 5050
+      },
+      "rem": 46,
+      "stageH": 5770,
+      "stageW": 460,
+      "viewportH": 762,
+      "viewportW": 460,
+      "scenes": [
+        {
+          "id": "scene-cover",
+          "offsetTop": 0,
+          "height": 900
+        },
+        {
+          "id": "scene-names",
+          "offsetTop": 900,
+          "height": 304
+        },
+        {
+          "id": "scene-poem",
+          "offsetTop": 1204,
+          "height": 365
+        },
+        {
+          "id": "scene-portrait",
+          "offsetTop": 1569,
+          "height": 515
+        },
+        {
+          "id": "scene-story",
+          "offsetTop": 2084,
+          "height": 797
+        },
+        {
+          "id": "scene-landscape",
+          "offsetTop": 2880,
+          "height": 357
+        },
+        {
+          "id": "scene-time",
+          "offsetTop": 3237,
+          "height": 609
+        },
+        {
+          "id": "scene-venue",
+          "offsetTop": 3846,
+          "height": 598
+        },
+        {
+          "id": "scene-closing",
+          "offsetTop": 4444,
+          "height": 427
+        },
+        {
+          "id": "scene-rsvp",
+          "offsetTop": 4870,
+          "height": 900
+        }
+      ],
+      "weights": [
+        {
+          "cls": "poem__heading reveal",
+          "w": "400"
+        },
+        {
+          "cls": "story__heading",
+          "w": "400"
+        },
+        {
+          "cls": "t-heading reveal",
+          "w": "400"
+        },
+        {
+          "cls": "t-heading reveal",
+          "w": "400"
+        },
+        {
+          "cls": "t-heading reveal",
+          "w": "400"
+        }
+      ],
+      "objPos": [],
+      "docScrolls": false,
+      "hOverflow": false,
+      "rsvpOffsetTop": 4870,
+      "rsvpH": 900,
+      "reveals": 7,
+      "countdownDigits": 8,
+      "stageOffsetAfter2_5s": -154.72
+    }
+  }
+}
