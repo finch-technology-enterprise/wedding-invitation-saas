@@ -1,133 +1,37 @@
-export interface RsvpInput {
-  name: string;
-  attending: boolean;
-  guests: number;
-  phone: string | null;
-  instagram: string | null;
-  message: string | null;
-}
-
-type ParseResult = { ok: true; value: RsvpInput } | { ok: false; error: string };
-
-const PHONE_RE = /^\+?[0-9]{8,15}$/;
-const IG_RE = /^[A-Za-z0-9._]{1,30}$/;
-
-export function parseRsvp(body: unknown): ParseResult {
-  if (typeof body !== "object" || body === null || Array.isArray(body)) {
-    return { ok: false, error: "invalid_body" };
-  }
-  const b = body as Record<string, unknown>;
-
-  if (typeof b.website === "string" && b.website.length > 0) {
-    return { ok: false, error: "honeypot" };
-  }
-
-  const name = typeof b.name === "string" ? b.name.trim() : "";
-  if (!name || name.length > 80) return { ok: false, error: "invalid_name" };
-
-  if (typeof b.attending !== "boolean") return { ok: false, error: "invalid_attending" };
-
-  let guests = 1;
-  if (b.guests !== undefined && b.guests !== null) {
-    if (typeof b.guests !== "number" || !Number.isInteger(b.guests)) {
-      return { ok: false, error: "invalid_guests" };
-    }
-    guests = b.guests;
-  }
-  if (guests < 1 || guests > 12) return { ok: false, error: "invalid_guests" };
-
-  let phone: string | null = null;
-  if (b.phone !== undefined && b.phone !== null && b.phone !== "") {
-    if (typeof b.phone !== "string") return { ok: false, error: "invalid_phone" };
-    phone = b.phone.replace(/[\s-]/g, "");
-    if (!PHONE_RE.test(phone)) return { ok: false, error: "invalid_phone" };
-  }
-
-  let instagram: string | null = null;
-  if (b.instagram !== undefined && b.instagram !== null && b.instagram !== "") {
-    if (typeof b.instagram !== "string") return { ok: false, error: "invalid_instagram" };
-    instagram = b.instagram.trim().replace(/^@/, "").toLowerCase();
-    if (!IG_RE.test(instagram)) return { ok: false, error: "invalid_instagram" };
-  }
-
-  if (!phone && !instagram) return { ok: false, error: "contact_required" };
-
-  let message: string | null = null;
-  if (b.message !== undefined && b.message !== null && b.message !== "") {
-    if (typeof b.message !== "string") return { ok: false, error: "invalid_message" };
-    message = b.message.trim();
-    if (message.length > 500) return { ok: false, error: "invalid_message" };
-  }
-
-  return {
-    ok: true,
-    value: { name, attending: b.attending as boolean, guests, phone, instagram, message },
-  };
-}
-
 /**
- * Surface the real cause of a 500 in Workers logs without leaking it to the
- * client. Only the error name/message/stack is logged — never request bodies,
- * headers or env values, so secrets cannot end up in observability output.
+ * Platform Worker.
+ *
+ * Routing (see arch report §D):
+ *   /api/v1/*          versioned platform API (Hono sub-app; WS2+)
+ *   /api/rsvp|/api/rsvps  legacy single-invitation routes (WS0–WS5 only;
+ *                         retired when the frozen frontend is extracted)
+ *   /i/{slug}          public invitation (WS5/WS6)
+ *   /preview/{token}   draft preview (WS5)
+ *   /media/{assetId}   R2 delivery (WS4)
+ *   /admin             tenant console, served statically as clean URL for
+ *                      /admin.html (auth is API-enforced; the shell is inert
+ *                      without a session). WS7 replaces the file.
+ *   /platform-admin    operator console (WS9 adds platform-admin.html, which
+ *                      the same clean-URL rule then serves; until then the
+ *                      Worker answers 501 on asset miss).
+ *   everything else    Static Assets (frozen public invitation at / until WS6)
  */
-function logFailure(route: string, err: unknown): void {
-  const detail =
-    err instanceof Error
-      ? { name: err.name, message: err.message, stack: err.stack }
-      : { name: "NonError", message: String(err) };
-  console.error(`[${route}] unhandled failure`, detail);
-}
 
-function json(data: unknown, status = 200): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { "content-type": "application/json; charset=utf-8" },
-  });
-}
+import { Hono } from "hono";
+import { fail, json, ok } from "./lib/respond.js";
+import { deploymentMode } from "./lib/mode.js";
+import { handleLegacyList, handleLegacyRsvp, logFailure } from "./routes/legacy.js";
 
-async function handleRsvp(req: Request, env: Env): Promise<Response> {
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    return json({ ok: false, error: "invalid_json" }, 400);
-  }
+const v1 = new Hono<{ Bindings: Env }>();
 
-  const parsed = parseRsvp(body);
-  if (!parsed.ok) {
-    // Honeypot hits get a fake success so bots think they landed one.
-    if (parsed.error === "honeypot") return json({ ok: true });
-    return json({ ok: false, error: parsed.error }, 400);
-  }
+// WS2 owns: auth, tenants, invitations, media, rsvp, platform.
+// Until then the versioned API surface does not exist.
+v1.all("/*", (c) => fail("not_built", 501));
 
-  const v = parsed.value;
-  await env.DB.prepare(
-    "INSERT INTO rsvps (name, attending, guests, phone, instagram, message) VALUES (?1, ?2, ?3, ?4, ?5, ?6)"
-  )
-    .bind(v.name, v.attending ? 1 : 0, v.guests, v.phone, v.instagram, v.message)
-    .run();
-
-  return json({ ok: true });
-}
-
-async function keysMatch(candidate: string | null, secret: string): Promise<boolean> {
-  if (!candidate) return false;
-  const enc = new TextEncoder();
-  const [a, b] = await Promise.all([
-    crypto.subtle.digest("SHA-256", enc.encode(candidate)),
-    crypto.subtle.digest("SHA-256", enc.encode(secret)),
-  ]);
-  return crypto.subtle.timingSafeEqual(a, b);
-}
-
-async function handleList(req: Request, env: Env): Promise<Response> {
-  if (!(await keysMatch(req.headers.get("x-admin-key"), env.ADMIN_KEY))) {
-    return json({ ok: false, error: "unauthorized" }, 401);
-  }
-  const { results } = await env.DB.prepare(
-    "SELECT id, name, attending, guests, phone, instagram, message, created_at FROM rsvps ORDER BY id DESC LIMIT 500"
-  ).all();
-  return json({ ok: true, rsvps: results });
+async function servePlatformAdmin(): Promise<Response> {
+  // WS9 builds the operator console. JSON (not HTML) so the gap is
+  // explicit rather than a half-built page.
+  return fail("platform_admin_not_built", 501);
 }
 
 export default {
@@ -135,10 +39,15 @@ export default {
     const url = new URL(req.url);
     const path = url.pathname;
 
+    if (path.startsWith("/api/v1/")) {
+      return v1.fetch(req, env);
+    }
+
+    // --- legacy single-invitation API (behaviour frozen until WS6) ---
     if (path === "/api/rsvp") {
       if (req.method !== "POST") return json({ ok: false, error: "method_not_allowed" }, 405);
       try {
-        return await handleRsvp(req, env);
+        return await handleLegacyRsvp(req, env);
       } catch (err) {
         logFailure("POST /api/rsvp", err);
         return json({ ok: false, error: "server_error" }, 500);
@@ -148,13 +57,51 @@ export default {
     if (path === "/api/rsvps") {
       if (req.method !== "GET") return json({ ok: false, error: "method_not_allowed" }, 405);
       try {
-        return await handleList(req, env);
+        return await handleLegacyList(req, env);
       } catch (err) {
         logFailure("GET /api/rsvps", err);
         return json({ ok: false, error: "server_error" }, 500);
       }
     }
 
-    return json({ ok: false, error: "not_found" }, 404);
+    if (path === "/api/v1" || path === "/api/v1/") {
+      return ok({ version: "v1", mode: deploymentMode(env) });
+    }
+
+    // --- platform surfaces (stubs until their workstreams) ---
+    // Note: /admin is served statically (clean URL for /admin.html) and
+    // never reaches the Worker. Only the not-yet-built platform console
+    // needs a Worker answer (asset miss falls through to here).
+    if (path === "/platform-admin") {
+      if (req.method !== "GET") return fail("method_not_allowed", 405);
+      return servePlatformAdmin();
+    }
+
+    if (path === "/platform-admin/" || path.startsWith("/platform-admin/")) {
+      return servePlatformAdmin();
+    }
+
+    if (path === "/i/" || path.startsWith("/i/")) {
+      if (req.method !== "GET") return fail("method_not_allowed", 405);
+      return fail("invitation_not_found", 404);
+    }
+
+    if (path === "/preview/" || path.startsWith("/preview/")) {
+      if (req.method !== "GET") return fail("method_not_allowed", 405);
+      return fail("preview_not_found", 404);
+    }
+
+    if (path === "/media/" || path.startsWith("/media/")) {
+      if (req.method !== "GET" && req.method !== "HEAD") {
+        return fail("method_not_allowed", 405);
+      }
+      return fail("media_not_found", 404);
+    }
+
+    if (path === "/api/health") {
+      return ok({ mode: deploymentMode(env) });
+    }
+
+    return fail("not_found", 404);
   },
 };

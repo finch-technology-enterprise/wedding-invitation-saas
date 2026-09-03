@@ -1,0 +1,11 @@
+# Local dev secrets. Copy to .dev.vars (gitignored) — never commit real values.
+#
+# Legacy single-invitation admin key (pre-platform auth; removed in WS2).
+# Kept working until the tenant auth cutover so the frozen invitation's
+# admin viewer keeps functioning during the revamp.
+ADMIN_KEY=change-me-to-a-long-random-string
+
+# First-claim bootstrap gate for self-hosted mode (WS2). Optional: when
+# set, /admin setup requires this token; when empty, the first visitor
+# claims the super-admin (only before any user exists).
+BOOTSTRAP_TOKEN=

@@ -1,6 +1,9 @@
 node_modules/
 .wrangler/
 .dev.vars
+# Per-deployer Cloudflare config (account_id, database_id). Copy from
+# wrangler.jsonc.example and fill in — never commit the real file.
+wrangler.jsonc
 worker-configuration.d.ts
 dist/
 .admin-key.local

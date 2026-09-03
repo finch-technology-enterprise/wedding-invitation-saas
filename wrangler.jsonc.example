@@ -1,0 +1,41 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "wedding-invite",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-22",
+  // Your Cloudflare account ID. Find it in the dashboard URL or run
+  // `npx wrangler whoami`. Never commit the real value — copy this file
+  // to wrangler.jsonc (gitignored) and fill it in there.
+  "account_id": "REPLACE_WITH_YOUR_CLOUDFLARE_ACCOUNT_ID",
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  "vars": {
+    // "self_hosted" (default, single-tenant, quotas off) or "hosted"
+    // (multi-tenant SaaS, registration + quotas on).
+    "DEPLOYMENT_MODE": "self_hosted"
+  },
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*", "/i/*", "/media/*", "/preview/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      // Create with: npx wrangler d1 create invite-platform
+      // Then paste the returned database_id here.
+      "database_name": "invite-platform",
+      "database_id": "REPLACE_WITH_YOUR_D1_DATABASE_ID",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "MEDIA",
+      // Create with: npx wrangler r2 bucket create invite-media
+      "bucket_name": "invite-media"
+    }
+  ]
+}

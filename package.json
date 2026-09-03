@@ -20,5 +20,8 @@
   },
   "allowScripts": {
     "workerd@1.20260820.1": true
+  },
+  "dependencies": {
+    "hono": "^4.13.5"
   }
 }
