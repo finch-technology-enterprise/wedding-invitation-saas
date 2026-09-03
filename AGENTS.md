@@ -54,10 +54,21 @@ npx wrangler d1 migrations apply invite --local   # once, or after new migration
 npx wrangler dev --port 8788                      # 8787 is often taken here
 ```
 
-Without the migration step `POST /api/rsvp` returns HTTP 500 locally,
-because the local D1 has no `rsvps` table. The Vitest suite applies
-migrations itself, so tests pass even when local dev is unmigrated —
-run the command above if a local RSVP fails.
+### Known limitation: local `POST /api/rsvp` returns 500
+
+Temporary and expected during the platform build-out. The WS1 platform
+migration drops the pre-platform `rsvps` table, and the frozen public
+invitation at `/` still posts to that legacy route. Clicking submit in a
+local browser therefore fails until WS6/WS8 replace it with
+`POST /i/{slug}/rsvp`.
+
+No compatibility shim will be added for it: that code would only be
+deleted again a few workstreams later.
+
+Nothing else is affected — the Worker suite creates the table itself in
+`tests/setup.ts`, the e2e suite posts to its own stub
+(`tests/e2e/server.mjs`), and production still runs the pre-platform
+schema.
 
 Secrets for local dev live in `.dev.vars` (never commit).
 

@@ -3,8 +3,23 @@
  *
  * Moved verbatim from the original src/index.ts during WS0 so the new
  * router can take shape around them. The frozen public invitation at /
- * still posts here. WS6 (theme extraction) retires these in favour of
+ * still posts here. WS6/WS8 retire these in favour of
  * /api/v1 + POST /i/{slug}/rsvp; until then behaviour must not change.
+ *
+ * KNOWN TEMPORARY LOCAL LIMITATION
+ * --------------------------------
+ * The WS1 platform migration drops the pre-platform `rsvps` table, so a
+ * local `POST /api/rsvp` returns HTTP 500 against a freshly migrated local
+ * D1. This is accepted and deliberate: adding a compatibility table or
+ * shim now would only be deleted again at WS6/WS8.
+ *
+ * It affects local browser clicking only — not correctness of the suites:
+ *   - Worker tests create the table in tests/setup.ts
+ *   - the e2e suite posts to its own stub server (tests/e2e/server.mjs)
+ *   - production still runs the pre-platform schema and is unaffected
+ *
+ * Resolution: delete this file when the new RSVP stack becomes
+ * authoritative. See README "Known limitations".
  */
 
 import { json } from "../lib/respond.js";

@@ -22,6 +22,7 @@ import { fail, json, ok } from "./lib/respond.js";
 import { deploymentMode } from "./lib/mode.js";
 import { AccessError } from "./lib/authz.js";
 import { auth } from "./routes/auth.js";
+import { invitations, tenants } from "./routes/tenants.js";
 import { handleLegacyList, handleLegacyRsvp, logFailure } from "./routes/legacy.js";
 
 // basePath: the Worker forwards the untouched request, so routes below
@@ -40,8 +41,10 @@ v1.onError((err) => {
 });
 
 v1.route("/auth", auth);
+v1.route("/tenants", tenants);
+v1.route("/invitations", invitations);
 
-// WS3+ own: tenants, invitations, media, rsvp, platform.
+// WS4+ own: media, rsvp, platform.
 v1.all("/*", (c) => fail("not_built", 501));
 
 async function servePlatformAdmin(): Promise<Response> {
