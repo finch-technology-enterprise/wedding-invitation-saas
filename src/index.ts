@@ -23,6 +23,8 @@ import { deploymentMode } from "./lib/mode.js";
 import { AccessError } from "./lib/authz.js";
 import { auth } from "./routes/auth.js";
 import { invitations, tenants } from "./routes/tenants.js";
+import { media } from "./routes/media.js";
+import { serveMedia } from "./routes/deliver.js";
 import { handleLegacyList, handleLegacyRsvp, logFailure } from "./routes/legacy.js";
 
 // basePath: the Worker forwards the untouched request, so routes below
@@ -43,8 +45,11 @@ v1.onError((err) => {
 v1.route("/auth", auth);
 v1.route("/tenants", tenants);
 v1.route("/invitations", invitations);
+// Media hangs off the invitation it belongs to, so it mounts on the same
+// prefix and resolves ownership through the same requireInvitation check.
+v1.route("/invitations", media);
 
-// WS4+ own: media, rsvp, platform.
+// WS5+ own: revisions, rsvp, platform.
 v1.all("/*", (c) => fail("not_built", 501));
 
 async function servePlatformAdmin(): Promise<Response> {
@@ -114,7 +119,8 @@ export default {
       if (req.method !== "GET" && req.method !== "HEAD") {
         return fail("method_not_allowed", 405);
       }
-      return fail("media_not_found", 404);
+      const assetId = path.slice("/media/".length);
+      return serveMedia(req, env, assetId);
     }
 
     if (path === "/api/health") {
