@@ -501,8 +501,39 @@ export async function handlePublicRsvp(req: Request, env: Env, slug: string): Pr
   return ok({});
 }
 
-/** Snapshot the form into the published revision. Called at publish time. */
+/**
+ * Snapshot the form into the published revision. Called at publish time.
+ *
+ * Materializes the default form first if the tenant never opened the RSVP
+ * editor. Without persisted rows the default fields have no IDs, and
+ * answers — which reference a field row, not its label — would have
+ * nothing to attach to, silently discarding what a guest wrote.
+ */
 export async function snapshotForm(env: Env, invitationId: string): Promise<FormDefinition> {
+  const existing = await env.DB.prepare("SELECT id FROM rsvp_forms WHERE invitation_id = ?")
+    .bind(invitationId)
+    .first<{ id: string }>();
+
+  if (!existing) {
+    const form = defaultFormDefinition();
+    const formId = newId();
+    const now = nowMs();
+
+    await env.DB.batch([
+      env.DB.prepare(
+        `INSERT INTO rsvp_forms (id, invitation_id, enabled, guest_limit, created_at, updated_at)
+         VALUES (?, ?, 1, ?, ?, ?)`
+      ).bind(formId, invitationId, form.guestLimit, now, now),
+      ...form.fields.map((field, index) => {
+        field.id = newId();
+        return env.DB.prepare(
+          `INSERT INTO rsvp_fields (id, form_id, key, kind, label, required, position)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`
+        ).bind(field.id, formId, field.key, field.kind, field.label, field.required ? 1 : 0, index);
+      }),
+    ]);
+  }
+
   return loadForm(env, invitationId);
 }
 

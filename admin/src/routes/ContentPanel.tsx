@@ -81,19 +81,6 @@ export function ContentPanel() {
                   update({ date: { iso: toIsoWithOffset(value ? new Date(value) : null) } })
                 }
               />
-              {/* The picker is a popover, so its value cannot be typed.
-                  This input exposes the canonical ISO value the picker
-                  writes, giving tests (and anyone scripting the admin) a
-                  stable handle on it. Visually hidden rather than
-                  type="hidden" so it still receives input events. */}
-              <input
-                aria-hidden="true"
-                tabIndex={-1}
-                data-testid="ceremony-iso"
-                value={config.date?.iso ?? ""}
-                onChange={(e) => update({ date: { iso: e.currentTarget.value } })}
-                style={{ position: "absolute", opacity: 0, width: 1, height: 1, pointerEvents: "none" }}
-              />
 
               <NumberInput
                 label="Duration (hours)"

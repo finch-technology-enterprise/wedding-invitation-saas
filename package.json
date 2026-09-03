@@ -12,8 +12,9 @@
     "build:admin": "vite build",
     "dev:admin": "vite",
     "check:admin": "tsc -p admin/tsconfig.json",
-    "build": "npm run build:admin",
-    "test:admin": "playwright test -c playwright.admin.config.ts"
+    "build": "npm run build:admin && npm run build:platform",
+    "test:admin": "playwright test -c playwright.admin.config.ts",
+    "build:platform": "BUILD_TARGET=platform vite build"
   },
   "devDependencies": {
     "@cloudflare/vitest-plugin": "^1.0.0",

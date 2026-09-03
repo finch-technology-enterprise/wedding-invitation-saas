@@ -45,26 +45,33 @@ async function signUp(page: Page): Promise<{ email: string }> {
 }
 
 /**
- * Set the ceremony date.
+ * Set the ceremony date by driving the real picker.
  *
- * The Mantine picker is a popover whose value cannot be typed, so the
- * date is written through the canonical hidden ISO input the panel
- * exposes. What is under test here is that a valid date reaches the
- * server, not the third-party calendar's own interaction model.
+ * The control is a popover with a calendar and time inputs, so the date
+ * is chosen the way a person would rather than through a test-only
+ * affordance. This exercises the actual component the tenant uses.
  */
-async function setCeremonyDate(page: Page, iso = "2027-10-09T11:00:00+08:00"): Promise<void> {
-  await page.locator('[data-testid="ceremony-iso"]').evaluate((el, value) => {
-    const input = el as HTMLInputElement;
-    const setter = Object.getOwnPropertyDescriptor(
-      HTMLInputElement.prototype,
-      "value"
-    )!.set!;
-    setter.call(input, value);
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-    input.dispatchEvent(new Event("change", { bubbles: true }));
-  }, iso);
+async function setCeremonyDate(page: Page): Promise<void> {
+  const trigger = page.getByLabel("Ceremony starts");
+  await trigger.click();
 
-  await expect(page.locator('[data-testid="ceremony-iso"]')).toHaveValue(iso);
+  // Each day cell carries a full accessible name ("15 September 2026"),
+  // which is stable across builds and unambiguous between adjacent
+  // months — unlike the bare visible number.
+  const day = page.getByRole("button", { name: /^15 \w+ \d{4}$/ });
+  await expect(day.first()).toBeVisible();
+  await day.first().click();
+
+  // DateTimePicker keeps the popover open for the time step and commits
+  // through its confirm control.
+  const confirm = page.getByRole("button", { name: /^(submit|ok|apply)$/i });
+  if (await confirm.count()) await confirm.first().click();
+
+  // Close by clicking the heading, which is outside the popover.
+  await page.getByRole("heading", { level: 2 }).first().click({ force: true });
+
+  // The trigger renders the chosen value once it is committed.
+  await expect(trigger).not.toBeEmpty({ timeout: 5000 });
 }
 
 async function createInvitation(page: Page): Promise<{ slug: string; title: string }> {

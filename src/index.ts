@@ -28,6 +28,8 @@ import { invitations, tenants } from "./routes/tenants.js";
 import { media } from "./routes/media.js";
 import { publish } from "./routes/publish.js";
 import { handlePublicRsvp, rsvp } from "./routes/rsvp.js";
+import { platform } from "./routes/platform.js";
+import { cleanup } from "./routes/cleanup.js";
 import { serveMedia } from "./routes/deliver.js";
 import { serveInvitation, servePreview } from "./routes/invite.js";
 // Structured failure logging for the versioned API.
@@ -58,14 +60,40 @@ v1.route("/invitations", invitations);
 v1.route("/invitations", media);
 v1.route("/invitations", publish);
 v1.route("/invitations", rsvp);
+// Operator surface: a separate authorization domain, not a privileged
+// branch inside the tenant routes above.
+v1.route("/platform", platform);
+v1.route("/platform/cleanup", cleanup);
 
 // WS8+ own: rsvp configuration, platform operator API.
 v1.all("/*", (c) => fail("not_built", 501));
 
-async function servePlatformAdmin(): Promise<Response> {
-  // WS9 builds the operator console. JSON (not HTML) so the gap is
-  // explicit rather than a half-built page.
-  return fail("platform_admin_not_built", 501);
+/**
+ * Serve a single-page app shell.
+ *
+ * Both consoles are client-routed, so every non-asset path under them
+ * must return the same HTML or a reload on a deep link would 404 against
+ * Static Assets.
+ */
+async function serveSpaShell(
+  req: Request,
+  env: Env,
+  shellPath: string,
+  missingError: string
+): Promise<Response> {
+  const url = new URL(req.url);
+  url.pathname = shellPath;
+  url.search = "";
+
+  const res = await env.ASSETS.fetch(new Request(url.toString(), { method: "GET" }));
+  if (!res.ok) return fail(missingError, 501);
+
+  const headers = new Headers(res.headers);
+  headers.set("content-type", "text/html; charset=utf-8");
+  // Authenticated surfaces: keep them out of search results and caches.
+  headers.set("x-robots-tag", "noindex, nofollow");
+  headers.set("cache-control", "no-cache");
+  return new Response(res.body, { status: 200, headers });
 }
 
 export default {
@@ -90,32 +118,23 @@ export default {
         return fail("method_not_allowed", 405);
       }
       if (!path.startsWith("/admin/assets/")) {
-        const shell = new URL(req.url);
-        shell.pathname = "/admin/index.html";
-        shell.search = "";
-        const res = await env.ASSETS.fetch(new Request(shell.toString(), { method: "GET" }));
-        if (res.ok) {
-          const headers = new Headers(res.headers);
-          headers.set("content-type", "text/html; charset=utf-8");
-          // The console is authenticated; keep it out of search results
-          // and shared caches.
-          headers.set("x-robots-tag", "noindex, nofollow");
-          headers.set("cache-control", "no-cache");
-          return new Response(res.body, { status: 200, headers });
-        }
-        return fail("admin_not_built", 501);
+        return serveSpaShell(req, env, "/admin/index.html", "admin_not_built");
       }
       // Fall through to Static Assets for hashed bundle files.
     }
 
-    // --- platform surfaces (stubs until their workstreams) ---
-    if (path === "/platform-admin") {
-      if (req.method !== "GET") return fail("method_not_allowed", 405);
-      return servePlatformAdmin();
-    }
-
-    if (path === "/platform-admin/" || path.startsWith("/platform-admin/")) {
-      return servePlatformAdmin();
+    // --- operator console ---
+    // Same SPA treatment as /admin: every path returns the shell so deep
+    // links survive reload. Authorization is enforced by the API, not by
+    // withholding the HTML.
+    if (path === "/platform-admin" || path.startsWith("/platform-admin/")) {
+      if (req.method !== "GET" && req.method !== "HEAD") {
+        return fail("method_not_allowed", 405);
+      }
+      if (!path.startsWith("/platform-admin/assets/")) {
+        return serveSpaShell(req, env, "/platform-admin/index.html", "platform_admin_not_built");
+      }
+      // Fall through to Static Assets for hashed bundle files.
     }
 
     if (path === "/i/" || path.startsWith("/i/")) {

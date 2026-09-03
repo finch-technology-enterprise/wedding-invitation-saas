@@ -62,6 +62,12 @@ function baseConfig(overrides: Record<string, unknown> = {}): Record<string, unk
 
 async function reset(): Promise<void> {
   for (const sql of [
+    // Publishing materializes the RSVP form, so these must go first:
+    // RESTRICT foreign keys make the order explicit rather than implied.
+    "DELETE FROM rsvp_answers",
+    "DELETE FROM rsvp_submissions",
+    "DELETE FROM rsvp_fields",
+    "DELETE FROM rsvp_forms",
     "DELETE FROM preview_tokens",
     "DELETE FROM media_assets",
     "UPDATE invitations SET published_revision_id = NULL",

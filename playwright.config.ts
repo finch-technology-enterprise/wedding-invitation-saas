@@ -6,7 +6,7 @@ export default defineConfig({
   testDir: "./tests/e2e",
   // The admin suite needs a real Worker (sessions, D1, R2) and has its own
   // config; this one runs against the static fixture server.
-  testIgnore: /admin\.spec\.ts/,
+  testIgnore: /(admin|platform)\.spec\.ts/,
   fullyParallel: false,
   workers: 1,
   timeout: 45_000,

@@ -12,7 +12,7 @@ const PORT = 8788;
  */
 export default defineConfig({
   testDir: "./tests/e2e",
-  testMatch: /admin\.spec\.ts/,
+  testMatch: /(admin|platform)\.spec\.ts/,
   fullyParallel: false,
   workers: 1,
   timeout: 60_000,
@@ -24,7 +24,7 @@ export default defineConfig({
   projects: [{ name: "admin", use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 900 } } }],
   webServer: {
     // The admin bundle must exist before the Worker can serve it.
-    command: `npm run build:admin && npx wrangler dev --port ${PORT}`,
+    command: `npm run build && npx wrangler dev --port ${PORT}`,
     url: `http://127.0.0.1:${PORT}/api/health`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

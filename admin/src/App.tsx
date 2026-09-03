@@ -1,3 +1,4 @@
+import { Suspense, lazy } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { Center, Loader } from "@mantine/core";
 
@@ -6,16 +7,54 @@ import { AuthScreen } from "./routes/AuthScreen";
 import { Shell } from "./components/Shell";
 import { Dashboard } from "./routes/Dashboard";
 import { InvitationList } from "./routes/InvitationList";
-import { NewInvitation } from "./routes/NewInvitation";
-import { InvitationEditor } from "./routes/InvitationEditor";
-import { ContentPanel } from "./routes/ContentPanel";
-import { MediaPanel } from "./routes/MediaPanel";
-import { MotionPanel } from "./routes/MotionPanel";
-import { RsvpPanel } from "./routes/RsvpPanel";
-import { ResponsesPanel } from "./routes/ResponsesPanel";
-import { PublishPanel } from "./routes/PublishPanel";
-import { SharingPanel } from "./routes/SharingPanel";
-import { SettingsPanel } from "./routes/SettingsPanel";
+
+/**
+ * Route-level splitting.
+ *
+ * The dashboard and invitation list ship with the shell because they are
+ * the landing surfaces. Everything heavier loads on demand, so a tenant
+ * who never opens the editor does not download the uploader, the focal
+ * picker, dnd-kit or the date pickers.
+ *
+ * The operator console is a separate Vite entry point at
+ * /platform-admin, not a lazy route here — a different authorization
+ * domain deserves a different bundle, and tenants must never receive it.
+ */
+const NewInvitation = lazy(() =>
+  import("./routes/NewInvitation").then((m) => ({ default: m.NewInvitation }))
+);
+const InvitationEditor = lazy(() =>
+  import("./routes/InvitationEditor").then((m) => ({ default: m.InvitationEditor }))
+);
+const ContentPanel = lazy(() =>
+  import("./routes/ContentPanel").then((m) => ({ default: m.ContentPanel }))
+);
+const MediaPanel = lazy(() =>
+  import("./routes/MediaPanel").then((m) => ({ default: m.MediaPanel }))
+);
+const MotionPanel = lazy(() =>
+  import("./routes/MotionPanel").then((m) => ({ default: m.MotionPanel }))
+);
+const RsvpPanel = lazy(() => import("./routes/RsvpPanel").then((m) => ({ default: m.RsvpPanel })));
+const ResponsesPanel = lazy(() =>
+  import("./routes/ResponsesPanel").then((m) => ({ default: m.ResponsesPanel }))
+);
+const PublishPanel = lazy(() =>
+  import("./routes/PublishPanel").then((m) => ({ default: m.PublishPanel }))
+);
+const SharingPanel = lazy(() =>
+  import("./routes/SharingPanel").then((m) => ({ default: m.SharingPanel }))
+);
+const SettingsPanel = lazy(() =>
+  import("./routes/SettingsPanel").then((m) => ({ default: m.SettingsPanel }))
+);
+function RouteFallback() {
+  return (
+    <Center h={240}>
+      <Loader />
+    </Center>
+  );
+}
 
 /**
  * Session gate.
@@ -48,24 +87,26 @@ export function App() {
   }
 
   return (
-    <Routes>
-      <Route element={<Shell session={session.data} />}>
-        <Route index element={<Dashboard />} />
-        <Route path="invitations" element={<InvitationList />} />
-        <Route path="invitations/new" element={<NewInvitation />} />
-        <Route path="invitations/:id" element={<InvitationEditor />}>
-          <Route index element={<Navigate to="content" replace />} />
-          <Route path="content" element={<ContentPanel />} />
-          <Route path="media" element={<MediaPanel />} />
-          <Route path="motion" element={<MotionPanel />} />
-          <Route path="rsvp" element={<RsvpPanel />} />
-          <Route path="responses" element={<ResponsesPanel />} />
-          <Route path="sharing" element={<SharingPanel />} />
-          <Route path="publish" element={<PublishPanel />} />
+    <Suspense fallback={<RouteFallback />}>
+      <Routes>
+        <Route element={<Shell session={session.data} />}>
+          <Route index element={<Dashboard />} />
+          <Route path="invitations" element={<InvitationList />} />
+          <Route path="invitations/new" element={<NewInvitation />} />
+          <Route path="invitations/:id" element={<InvitationEditor />}>
+            <Route index element={<Navigate to="content" replace />} />
+            <Route path="content" element={<ContentPanel />} />
+            <Route path="media" element={<MediaPanel />} />
+            <Route path="motion" element={<MotionPanel />} />
+            <Route path="rsvp" element={<RsvpPanel />} />
+            <Route path="responses" element={<ResponsesPanel />} />
+            <Route path="sharing" element={<SharingPanel />} />
+            <Route path="publish" element={<PublishPanel />} />
+          </Route>
+          <Route path="settings" element={<SettingsPanel />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
-        <Route path="settings" element={<SettingsPanel />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Route>
-    </Routes>
+      </Routes>
+    </Suspense>
   );
 }
