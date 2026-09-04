@@ -3,6 +3,23 @@
 Thanks for taking a look. This is a small project with a few firm rules
 and not much ceremony.
 
+## Verification policy
+
+This repository intentionally does not use GitHub Actions or GitHub-hosted
+CI. Verification must be run locally before landing or releasing. Do not add
+`.github/workflows/*` unless the repository owner explicitly authorizes it.
+
+The local release gates are:
+
+```sh
+npm run typecheck
+npm test
+npm run build
+npm run test:admin
+npm run test:e2e
+node --check public/themes/*/js/*.js
+```
+
 ## Setup
 
 ```sh
@@ -27,11 +44,13 @@ npm run dev:admin              # terminal 2
 ```sh
 npm run typecheck   # Worker + both consoles
 npm test            # Worker/API suite
-npm run test:e2e    # public invitation, incl. visual baselines
+npm run build       # both console bundles
 npm run test:admin  # admin + operator browser suite
+npm run test:e2e    # public invitation, incl. visual baselines
+node --check public/themes/*/js/*.js
 ```
 
-All four should pass. The public suite is sensitive to other Chromium
+All six should pass locally. The public suite is sensitive to other Chromium
 instances competing for CPU — if it fails oddly, close them and rerun
 before assuming a real regression.
 

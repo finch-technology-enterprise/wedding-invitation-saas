@@ -78,6 +78,10 @@ editor, operator console.
 - Log RSVP bodies, guest names, phones, or party tokens. Housekeeping
   logs are structured counts only.
 - Modify production data while developing.
+- This repository intentionally does not use GitHub Actions or GitHub-hosted
+  CI. Run verification locally before landing or releasing. Do not add files
+  under `.github/workflows/` unless the repository owner explicitly
+  authorizes it.
 
 ## Local development
 
@@ -98,14 +102,15 @@ the example file). Invoke manually via
 
 1. `npm run typecheck`
 2. `npm test` — Worker/API suite (vitest, real D1+R2)
-3. `node --check public/themes/*/js/*.js` — if you touched guest JS
-4. `npm run build` — both consoles must compile
-5. `npm run test:e2e` / `test:admin` — browser suites. Baselines:
+3. `npm run build` — both consoles must compile
+4. `npm run test:admin` — admin + operator browser suite
+5. `npm run test:e2e` — public invitation browser suite. Baselines:
    cinematic frozen (do not touch); editorial has its own.
-6. Phone viewports (375/390/430): drift/countdown/RSVP/autosave/preview.
+6. `node --check public/themes/*/js/*.js` — guest renderer syntax
+7. Phone viewports (375/390/430): drift/countdown/RSVP/autosave/preview.
 
-Do not merge to `production` until the workstream is green (feature-branch
-workflow). Do not tag a release from a feature branch.
+All release verification is local; do not land to `production` or tag a
+release until these gates pass. Do not tag a release from a feature branch.
 
 ## Deploy
 
