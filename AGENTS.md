@@ -104,7 +104,7 @@ the example file). Invoke manually via
    cinematic frozen (do not touch); editorial has its own.
 6. Phone viewports (375/390/430): drift/countdown/RSVP/autosave/preview.
 
-Do not merge to `main` until the workstream is green (feature-branch
+Do not merge to `production` until the workstream is green (feature-branch
 workflow). Do not tag a release from a feature branch.
 
 ## Deploy

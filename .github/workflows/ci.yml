@@ -3,7 +3,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [production]
 
 jobs:
   verify:
@@ -15,6 +15,11 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - name: Prepare local test configuration
+        run: |
+          cp wrangler.jsonc.example wrangler.jsonc
+          perl -0pi -e 's/"DEPLOYMENT_MODE": "self_hosted"/"DEPLOYMENT_MODE": "hosted"/' wrangler.jsonc
+          perl -0pi -e 's/"database_name": "invite-platform"/"database_name": "invite"/' wrangler.jsonc
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
@@ -29,6 +34,12 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - name: Prepare local test configuration
+        run: |
+          cp wrangler.jsonc.example wrangler.jsonc
+          perl -0pi -e 's/"DEPLOYMENT_MODE": "self_hosted"/"DEPLOYMENT_MODE": "hosted"/' wrangler.jsonc
+          perl -0pi -e 's/"database_name": "invite-platform"/"database_name": "invite"/' wrangler.jsonc
+      - run: npx wrangler d1 migrations apply invite --local
       - run: npx playwright install --with-deps chromium
       - run: npm run build
       - run: npx playwright test -c playwright.admin.config.ts

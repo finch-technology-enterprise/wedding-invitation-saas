@@ -35,6 +35,11 @@ All four should pass. The public suite is sensitive to other Chromium
 instances competing for CPU — if it fails oddly, close them and rerun
 before assuming a real regression.
 
+`npm run typecheck` is self-contained and does not require a local
+`wrangler.jsonc` or generated `worker-configuration.d.ts`. The stable
+application environment contract lives in `src/env.d.ts`; Wrangler may still
+generate deployer-specific bindings for local editor support.
+
 There is no formatter config; match the surrounding style. Comments
 should explain *why*, not restate the code.
 
