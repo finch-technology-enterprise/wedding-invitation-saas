@@ -193,9 +193,17 @@ export function FormBuilder({
   };
 
   const addField = (kind: string) => {
-    // A client-side temporary id; the server assigns the durable one.
-    const id = `new-${crypto.randomUUID()}`;
-    const key = `q_${Math.random().toString(36).slice(2, 8)}`;
+    // Client-side temporary ids/keys; the server assigns the durable ones.
+    // crypto.randomUUID with a fallback (non-secure contexts).
+    const uuid = (() => {
+      try {
+        return crypto.randomUUID();
+      } catch {
+        return `${Date.now().toString(36)}-${Math.floor(Math.random() * 1e9).toString(36)}`;
+      }
+    })();
+    const id = `new-${uuid}`;
+    const key = `q_${uuid.replace(/-/g, "").slice(0, 8)}`;
     onChange([
       ...fields,
       {

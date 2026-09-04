@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "@mantine/form";
 import {
@@ -58,16 +58,26 @@ export function AuthScreen({ noTenant }: { noTenant?: boolean }) {
   const [busy, setBusy] = useState(false);
 
   // Decides whether this instance needs first-run setup, and whether
-  // hosted registration is available at all.
-  if (!status) {
+  // hosted registration is available at all. Fetched once on mount —
+  // never during render (V2 §1.7).
+  useEffect(() => {
+    let cancelled = false;
     void api
       .get<StatusResponse>("/auth/status")
       .then((s) => {
+        if (cancelled) return;
         setStatus(s);
         if (s.needsBootstrap) setMode("register");
       })
-      .catch(() => setStatus({ ok: true, mode: "hosted", needsBootstrap: false, registrationOpen: false }));
-  }
+      .catch(() => {
+        if (!cancelled) {
+          setStatus({ ok: true, mode: "hosted", needsBootstrap: false, registrationOpen: false });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const form = useForm({
     initialValues: { email: "", password: "" },

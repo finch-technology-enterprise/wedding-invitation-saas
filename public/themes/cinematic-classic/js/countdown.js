@@ -11,11 +11,13 @@ import { $$ } from "./dom.js";
 
 const ROLL_MS = 240;
 
-export function startCountdown(root, targetDate, { reducedMotion = false } = {}) {
+export function startCountdown(root, targetDate, { reducedMotion = false, strings = null } = {}) {
   const pairs = new Map();
   for (const pair of $$(".countdown__pair", root)) {
     pairs.set(pair.dataset.unit, $$(".countdown__digit", pair));
   }
+
+  const T = (key, fallback) => (strings && typeof strings[key] === "string" ? strings[key] : fallback);
 
   /** Replace a digit's contents with a single static glyph. */
   function settle(digitEl, char) {
@@ -60,13 +62,21 @@ export function startCountdown(root, targetDate, { reducedMotion = false } = {})
   }
 
   function setUnit(key, value) {
-    const digits = pairs.get(key);
+    let digits = pairs.get(key);
     if (!digits) return;
-    // Days can exceed 99; show the two most significant digits we can
-    // without changing the widget's geometry.
-    const text = String(Math.min(value, 99)).padStart(2, "0");
-    setDigit(digits[0], text[0]);
-    setDigit(digits[1], text[1]);
+    // V2: days are no longer capped at 99. The pair grows a hundreds digit
+    // when needed (up to 999); hours/minutes/seconds stay two digits.
+    let text = key === "days" ? String(Math.min(value, 999)) : String(Math.min(value, 99)).padStart(2, "0");
+    if (key === "days" && text.length === 3 && digits.length === 2) {
+      const first = digits[0].cloneNode(false);
+      first.dataset.value = "";
+      first.replaceChildren();
+      digits[0].before(first);
+      digits = [first, ...digits];
+      pairs.set(key, digits);
+    }
+    text = text.padStart(digits.length, "0").slice(-digits.length);
+    digits.forEach((d, i) => setDigit(d, text[i]));
   }
 
   let timer = 0;
@@ -81,8 +91,8 @@ export function startCountdown(root, targetDate, { reducedMotion = false } = {})
     root.setAttribute(
       "aria-label",
       days + hours + minutes + seconds === 0
-        ? "婚礼已经开始"
-        : `距离婚礼还有 ${days} 天 ${hours} 小时 ${minutes} 分 ${seconds} 秒`
+        ? T("countdownDone", "婚礼已经开始")
+        : `${T("countdownPrefix", "距离婚礼还有")} ${days} ${T("countdownDays", "天")} ${hours} ${T("countdownHours", "小时")} ${minutes} ${T("countdownMinutes", "分")} ${seconds} ${T("countdownSeconds", "秒")}`
     );
 
     // Stop cleanly at zero — never count into negatives.

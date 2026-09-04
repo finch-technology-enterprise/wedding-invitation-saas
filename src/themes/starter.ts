@@ -26,8 +26,48 @@ function defaultCeremonyDate(): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T11:00:00+00:00`;
 }
 
-export function starterConfig(): Record<string, unknown> {
+export function starterConfig(themeId = "cinematic-classic"): Record<string, unknown> {
   const iso = defaultCeremonyDate();
+
+  if (themeId === "modern-editorial") {
+    return {
+      themeId: "modern-editorial",
+      themeVersion: 1,
+      couple: { partnerA: "Alex", partnerB: "Jamie", tagline: "Together with our families" },
+      date: { iso, label: "", durationHours: 4 },
+      copy: {
+        hero: { kicker: "The Wedding Of", title: "Alex & Jamie", subtitle: "Together with our families, we invite you to celebrate" },
+        couple: { heading: "The Couple", body: "Two stories, one beginning. We cannot wait to celebrate with you." },
+        schedule: { heading: "Schedule", note: "Doors open thirty minutes before the ceremony." },
+        venue: { heading: "Venue", note: "" },
+        rsvp: { heading: "RSVP", body: "Kindly let us know if you can join us." },
+      },
+      schedule: {
+        items: [
+          { time: "11:00", title: "Ceremony", note: "" },
+          { time: "12:30", title: "Lunch", note: "" },
+        ],
+      },
+      venue: { tba: true, name: "", address: "", mapsUrl: "" },
+      rsvp: {
+        deadlineISO: new Date(Date.parse(iso) - 14 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .replace(/\.\d{3}Z$/, "+00:00"),
+        maxGuests: 12,
+      },
+      media: {
+        cover: { assetId: null },
+        gallery_1: { assetId: null },
+        gallery_2: { assetId: null },
+        gallery_3: { assetId: null },
+        venue: { assetId: null },
+      },
+      music: { assetId: null, enabled: false, title: "" },
+      motion: { level: "subtle" },
+      tokens: { accent: "#1a1a1a", paper: "#ffffff", ink: "#1a1a1a", typePreset: "mixed" },
+      sections: { hero: true, couple: true, schedule: true, gallery: true, venue: true, rsvp: true },
+    };
+  }
 
   return {
     themeId: "cinematic-classic",

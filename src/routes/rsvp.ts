@@ -407,6 +407,27 @@ export async function handlePublicRsvp(req: Request, env: Env, slug: string): Pr
     return ok({});
   }
 
+  // Idempotency (V2 §1.5): client-generated stable key per logical
+  // submission. Retries return the original submission; a new RSVP uses a
+  // new key. Legacy clients without a key keep the old behavior.
+  // Protocol keys are stripped before form validation (which rejects
+  // unknown fields) — they are transport, not answers.
+  const record = (body ?? {}) as Record<string, unknown>;
+  const rawKey = record.idempotencyKey;
+  const idempotencyKey =
+    typeof rawKey === "string" && /^[A-Za-z0-9_-]{8,128}$/.test(rawKey) ? rawKey : null;
+  const submissionBody: Record<string, unknown> = { ...record };
+  delete submissionBody.idempotencyKey;
+  delete submissionBody.partyToken;
+  if (idempotencyKey) {
+    const existing = await env.DB.prepare(
+      "SELECT id FROM rsvp_submissions WHERE invitation_id = ? AND idempotency_key = ?"
+    )
+      .bind(invitation.id, idempotencyKey)
+      .first<{ id: string }>();
+    if (existing) return ok({ submissionId: existing.id, deduped: true });
+  }
+
   // The published snapshot — not the admin's current draft.
   let form: FormDefinition;
   try {
@@ -416,7 +437,7 @@ export async function handlePublicRsvp(req: Request, env: Env, slug: string): Pr
     form = defaultFormDefinition();
   }
 
-  const result = validateSubmission(body, form, nowMs());
+  const result = validateSubmission(submissionBody, form, nowMs());
   if (!result.ok) {
     const closed = result.errors.find((e) => e.code === "rsvp_closed" || e.code === "rsvp_disabled");
     if (closed) return fail(closed.code, 403);
@@ -432,6 +453,15 @@ export async function handlePublicRsvp(req: Request, env: Env, slug: string): Pr
   const value = result.value!;
   const submissionId = newId();
   const now = nowMs();
+  // Optional personalized RSVP: party token binds the reply to a guest
+  // party without forcing restricted mode on every wedding.
+  const rawParty = (body as Record<string, unknown>)?.partyToken;
+  let partyId: string | null = null;
+  if (typeof rawParty === "string" && rawParty.length >= 16 && rawParty.length <= 128) {
+    const { resolvePartyByToken } = await import("../lib/guests.js");
+    const party = await resolvePartyByToken(env, invitation.id, rawParty).catch(() => null);
+    partyId = party?.id ?? null;
+  }
 
   const formRow = await env.DB.prepare("SELECT id FROM rsvp_forms WHERE invitation_id = ?")
     .bind(invitation.id)
@@ -454,8 +484,9 @@ export async function handlePublicRsvp(req: Request, env: Env, slug: string): Pr
     env.DB.prepare(
       `INSERT INTO rsvp_submissions
          (id, invitation_id, form_id, attending, guest_count, contact_name,
-          contact_phone, contact_email, contact_instagram, created_at, ip_hash)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          contact_phone, contact_email, contact_instagram, created_at, updated_at, ip_hash,
+          idempotency_key, party_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).bind(
       submissionId,
       invitation.id,
@@ -467,7 +498,10 @@ export async function handlePublicRsvp(req: Request, env: Env, slug: string): Pr
       value.contactEmail,
       value.contactInstagram,
       now,
-      ipHash
+      now,
+      ipHash,
+      idempotencyKey,
+      partyId
     ),
     // Counter in the same batch as the row it counts.
     env.DB.prepare("UPDATE invitations SET rsvp_count = rsvp_count + 1 WHERE id = ?").bind(
@@ -490,6 +524,15 @@ export async function handlePublicRsvp(req: Request, env: Env, slug: string): Pr
   try {
     await env.DB.batch(statements);
   } catch (err) {
+    // Idempotency race: another request with the same key won. Return it.
+    if (idempotencyKey && String(err).includes("UNIQUE")) {
+      const winner = await env.DB.prepare(
+        "SELECT id FROM rsvp_submissions WHERE invitation_id = ? AND idempotency_key = ?"
+      )
+        .bind(invitation.id, idempotencyKey)
+        .first<{ id: string }>();
+      if (winner) return ok({ submissionId: winner.id, deduped: true });
+    }
     // Never log the submission itself: it is guest personal data.
     console.error("rsvp_insert_failed", {
       invitationId: invitation.id,
@@ -498,7 +541,7 @@ export async function handlePublicRsvp(req: Request, env: Env, slug: string): Pr
     return fail("server_error", 500);
   }
 
-  return ok({});
+  return ok({ submissionId, deduped: false });
 }
 
 /**

@@ -16,18 +16,15 @@ import { IconCalendarHeart, IconLogout, IconSettings, IconUser } from "@tabler/i
 
 import { useLogout, type SessionResponse } from "../lib/queries";
 
-/** The active tenant lives in component state, not storage: it is a view
- *  preference, and every request is authorized server-side regardless. */
-export const TenantContext = { current: "" };
-
+/** The active tenant is view state owned by this Shell. It is passed down
+ *  through the Outlet context ({ tenantId, session }) — never module
+ *  mutable state — and every request is authorized server-side regardless. */
 export function Shell({ session }: { session: SessionResponse }) {
   const [opened, { toggle, close }] = useDisclosure();
   const [tenantId, setTenantId] = useState(session.tenants[0]!.id);
   const location = useLocation();
   const navigate = useNavigate();
   const logout = useLogout();
-
-  TenantContext.current = tenantId;
 
   const nav = [
     { to: "/", label: "Dashboard", icon: IconCalendarHeart },

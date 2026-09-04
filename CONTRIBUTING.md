@@ -56,8 +56,9 @@ reaches the renderer — not visual ones.
 
 ### Want it to look different? Add a theme
 
-Theme #2 is the intended path, and the platform is built for it. See
-**[THEMES.md](THEMES.md)** for the full contract; briefly:
+`modern-editorial` is Theme #2. A third look is a new registry entry, not
+a restyle of cinematic-classic. See **[THEMES.md](THEMES.md)** for the
+full contract; briefly:
 
 ```
 public/themes/your-theme/

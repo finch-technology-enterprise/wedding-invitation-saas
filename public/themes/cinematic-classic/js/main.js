@@ -123,6 +123,11 @@ function buildConfig(bootstrap) {
       slug: bootstrap.slug ?? null,
       revisionId: bootstrap.revisionId ?? null,
       driftPxPerSec: config.motion?.driftPxPerSec,
+      // V2: invitation-level locale + system strings + optional
+      // personalized party greeting (?party= token, server-resolved).
+      locale: bootstrap.locale ?? "zh-CN",
+      strings: bootstrap.strings ?? null,
+      party: bootstrap.party ?? null,
     },
   };
 }
@@ -232,6 +237,20 @@ function boot() {
   const desc = document.querySelector('meta[name="description"]');
   if (desc) desc.content = `${coupleLine} · ${formatDottedDate(parts)}`;
 
+  // V2: document language follows the invitation locale (server also sets
+  // it during render; this covers static-file opens). Personalized party
+  // greeting, when the Worker resolved a ?party= token.
+  try {
+    if (meta.locale) document.documentElement.lang = meta.locale;
+  } catch { /* noop */ }
+  if (meta.party?.title) {
+    const banner = document.createElement("p");
+    banner.className = "party-greeting";
+    banner.textContent = meta.party.title;
+    banner.setAttribute("role", "note");
+    stage.prepend(banner);
+  }
+
   renderScenes(stage, wedding, parts);
 
   /* ---- timeline ---- */
@@ -291,7 +310,7 @@ function boot() {
   /* ---- countdown ---- */
 
   const countdownRoot = $("#countdown");
-  if (countdownRoot) startCountdown(countdownRoot, weddingDate, { reducedMotion });
+  if (countdownRoot) startCountdown(countdownRoot, weddingDate, { reducedMotion, strings: meta.strings });
 
   /* ---- calendar download ---- */
 
@@ -346,11 +365,17 @@ function boot() {
 
   // Scoped to this invitation. A preview posts to its own slug too, so a
   // shared draft link cannot be used to write into the live invitation.
+  // The party token rides along when present (?party= personalized link).
+  let partyToken = null;
+  try {
+    partyToken = new URLSearchParams(window.location.search).get("party");
+  } catch { /* noop */ }
   setupRsvp({
     wedding,
     timeline,
     live,
     endpoint: meta.slug ? `/i/${meta.slug}/rsvp` : "/i/demo/rsvp",
+    partyToken,
   });
 }
 

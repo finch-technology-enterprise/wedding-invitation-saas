@@ -17,7 +17,9 @@ import { nowMs } from "../lib/time.js";
 import { isSameOrigin } from "../lib/guard.js";
 import { requireInvitation } from "../lib/authz.js";
 import { hashToken } from "../lib/session.js";
-import { MANIFEST, validateConfig, type ValidatedConfig } from "../themes/cinematic-classic.js";
+import { getTheme } from "../themes/registry.js";
+import { loadInvitationForDraft, writeDraft } from "../lib/drafts.js";
+import { slotsOf, writeRevisionAssets } from "../lib/revisionAssets.js";
 import { snapshotForm } from "./rsvp.js";
 
 export const publish = new Hono<{ Bindings: Env }>();
@@ -50,16 +52,18 @@ async function readJson(c: {
 async function validateAssetReferences(
   env: Env,
   invitationId: string,
-  config: ValidatedConfig
+  config: Record<string, any>
 ): Promise<{ path: string; code: string }[]> {
   const errors: { path: string; code: string }[] = [];
 
   const wanted: Array<{ assetId: string; path: string; expected: "image" | "audio" }> = [];
-  for (const [slot, entry] of Object.entries(config.media)) {
-    if (entry.assetId) wanted.push({ assetId: entry.assetId, path: `media.${slot}`, expected: "image" });
+  const media = (config.media ?? {}) as Record<string, { assetId?: string | null }>;
+  for (const [slot, entry] of Object.entries(media)) {
+    if (entry?.assetId) wanted.push({ assetId: entry.assetId, path: `media.${slot}`, expected: "image" });
   }
-  if (config.music.assetId) {
-    wanted.push({ assetId: config.music.assetId, path: "music", expected: "audio" });
+  const musicAsset = (config.music as { assetId?: string | null } | undefined)?.assetId;
+  if (musicAsset) {
+    wanted.push({ assetId: musicAsset, path: "music", expected: "audio" });
   }
   if (!wanted.length) return errors;
 
@@ -93,6 +97,7 @@ publish.get("/:invitationId/draft", async (c) => {
 
   const row = await c.env.DB.prepare(
     `SELECT draft_json AS draftJson, draft_updated_at AS draftUpdatedAt,
+            draft_version AS draftVersion, theme_id AS themeId,
             published_revision_id AS publishedRevisionId, status
      FROM invitations WHERE id = ?`
   )
@@ -100,23 +105,28 @@ publish.get("/:invitationId/draft", async (c) => {
     .first<{
       draftJson: string | null;
       draftUpdatedAt: number | null;
+      draftVersion: number | null;
+      themeId: string;
       publishedRevisionId: string | null;
       status: string;
     }>();
 
+  const theme = getTheme(row?.themeId ?? "cinematic-classic");
   return ok({
     draft: row?.draftJson ? JSON.parse(row.draftJson) : null,
     draftUpdatedAt: row?.draftUpdatedAt ?? null,
+    draftVersion: row?.draftVersion ?? 1,
     status: row?.status ?? "draft",
     hasPublished: Boolean(row?.publishedRevisionId),
-    manifest: MANIFEST,
+    manifest: theme?.manifest ?? null,
+    theme: theme ? { id: theme.id, displayName: theme.displayName, version: theme.version } : null,
   });
 });
 
 /**
- * Save the draft. Validation happens on save (not only on publish) so the
- * admin surfaces a bad value at the moment it is entered, and so an
- * invalid config never sits in storage waiting to fail at publish time.
+ * Save the draft. Single canonical path (V2 §1.1): theme validation via
+ * the registry + ownership check + optimistic concurrency. Invalid configs
+ * fail here, never silently at publish time.
  */
 publish.put("/:invitationId/draft", async (c) => {
   const access = await requireInvitation(c.req.raw, c.env, c.req.param("invitationId"));
@@ -124,22 +134,26 @@ publish.put("/:invitationId/draft", async (c) => {
   const body = await readJson(c);
   if (!body) return fail("invalid_body");
 
-  const result = validateConfig(body.config ?? body);
-  if (!result.ok) return fail("invalid_config", 422, { errors: result.errors });
+  const stored = await loadInvitationForDraft(c.env, access.invitationId);
+  if (!stored) return fail("not_found", 404);
 
-  const assetErrors = await validateAssetReferences(c.env, access.invitationId, result.config!);
-  if (assetErrors.length) return fail("invalid_config", 422, { errors: assetErrors });
+  const rawExpected = (body as Record<string, unknown>).expectedVersion;
+  const expectedVersion =
+    typeof rawExpected === "number" && Number.isInteger(rawExpected) ? rawExpected : null;
+  // expectedVersion is required for concurrency protection, but legacy
+  // clients that omit it still get full validation (no silent weak path).
+  const result = await writeDraft(c.env, stored, (body as Record<string, unknown>).config ?? body, {
+    expectedVersion,
+    updatedBy: access.auth.user.id,
+  });
+  if (!result.ok) {
+    if (result.error === "draft_conflict") {
+      return fail("draft_conflict", 409, { draftVersion: result.draftVersion });
+    }
+    return fail("invalid_config", 422, { errors: result.errors ?? [] });
+  }
 
-  const now = nowMs();
-  await c.env.DB.prepare(
-    `UPDATE invitations
-     SET draft_json = ?, draft_updated_at = ?, draft_updated_by = ?, updated_at = ?
-     WHERE id = ?`
-  )
-    .bind(JSON.stringify(result.config), now, access.auth.user.id, now, access.invitationId)
-    .run();
-
-  return ok({ draftUpdatedAt: now });
+  return ok({ draftUpdatedAt: result.draftUpdatedAt, draftVersion: result.draftVersion });
 });
 
 // ------------------------------------------------------------------ publish
@@ -156,10 +170,10 @@ publish.post("/:invitationId/publish", async (c) => {
   const access = await requireInvitation(c.req.raw, c.env, c.req.param("invitationId"));
 
   const row = await c.env.DB.prepare(
-    "SELECT draft_json AS draftJson FROM invitations WHERE id = ?"
+    "SELECT draft_json AS draftJson, theme_id AS themeId FROM invitations WHERE id = ?"
   )
     .bind(access.invitationId)
-    .first<{ draftJson: string | null }>();
+    .first<{ draftJson: string | null; themeId: string }>();
 
   if (!row?.draftJson) return fail("nothing_to_publish", 409);
 
@@ -170,12 +184,14 @@ publish.post("/:invitationId/publish", async (c) => {
     return fail("invalid_config", 422, { errors: [{ path: "", code: "corrupt_draft" }] });
   }
 
-  // Re-validate at publish time: the theme's limits may have tightened, or
-  // a referenced asset may have been deleted since the draft was saved.
-  const result = validateConfig(parsed);
-  if (!result.ok) return fail("invalid_config", 422, { errors: result.errors });
+  // Re-validate at publish time via the registry: limits may have
+  // tightened, or a referenced asset may have been deleted.
+  const theme = getTheme(row.themeId ?? "cinematic-classic");
+  if (!theme) return fail("unknown_theme", 422);
+  const result = theme.validate(parsed);
+  if (!result.ok || !result.config) return fail("invalid_config", 422, { errors: result.errors ?? [] });
 
-  const assetErrors = await validateAssetReferences(c.env, access.invitationId, result.config!);
+  const assetErrors = await validateAssetReferences(c.env, access.invitationId, result.config as Record<string, any>);
   if (assetErrors.length) return fail("invalid_config", 422, { errors: assetErrors });
 
   const revisionId = newId();
@@ -188,11 +204,12 @@ publish.post("/:invitationId/publish", async (c) => {
   // afterwards cannot retroactively invalidate replies to the live
   // version — the draft only takes effect on the next publish.
   const rsvpForm = await snapshotForm(c.env, access.invitationId);
-  const publishedConfig = { ...result.config!, rsvpForm };
+  const publishedConfig = { ...(result.config as Record<string, unknown>), rsvpForm };
 
-  // The manifest lists exactly the assets this revision needs, which is
-  // what authorizes guest media access and what cleanup accounting reads.
+  // The manifest lists exactly the assets this revision needs (snapshot
+  // artifact); revision_assets is the authoritative relational lookup.
   const manifest = result.assetIds ?? [];
+  const slots = slotsOf(result.config as Record<string, any>);
 
   await c.env.DB.batch([
     c.env.DB.prepare(
@@ -213,7 +230,16 @@ publish.post("/:invitationId/publish", async (c) => {
        SET published_revision_id = ?, status = 'published', published_at = ?, updated_at = ?
        WHERE id = ?`
     ).bind(revisionId, now, now, access.invitationId),
+    ...slots.map((s) =>
+      c.env.DB.prepare(
+        `INSERT OR IGNORE INTO revision_assets
+          (revision_id, invitation_id, asset_id, slot, created_at)
+         VALUES (?, ?, ?, ?, ?)`
+      ).bind(revisionId, access.invitationId, s.assetId, s.slot, now)
+    ),
   ]);
+  // Keep helper import referenced for backfill paths.
+  void writeRevisionAssets;
 
   return ok({ revisionId, publishedAt: now });
 });

@@ -11,6 +11,7 @@ import "@mantine/notifications/styles.css";
 
 import { PlatformApp } from "./PlatformApp";
 import { ApiError } from "../lib/api";
+import { appTheme } from "../lib/theme";
 
 /**
  * Operator console entry point.
@@ -40,7 +41,7 @@ const router = createBrowserRouter([{ path: "*", element: <PlatformApp /> }], {
 
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <MantineProvider defaultColorScheme="light">
+    <MantineProvider theme={appTheme} defaultColorScheme="light">
       <QueryClientProvider client={queryClient}>
         <ModalsProvider>
           <Notifications position="top-right" />

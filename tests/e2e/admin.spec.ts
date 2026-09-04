@@ -274,13 +274,37 @@ test.describe("admin", () => {
     await page.getByRole("tab", { name: "Content" }).click();
     await page.getByLabel("Partner 1 — name").fill("Unsaved");
 
-    await expect(page.getByText("Unsaved changes")).toBeVisible();
+    // V2: autosave replaced the "Unsaved changes" badge with an explicit
+    // save-state indicator (Saved / Saving… / Offline / Conflict).
+    await expect(page.getByRole("status").filter({ hasText: /Saved|Saving/ })).toBeVisible();
 
+    // Navigating within the autosave debounce still has genuinely
+    // unpersisted edits, so the guard must still fire.
     await page.getByRole("link", { name: "Invitations" }).first().click();
     await expect(page.getByRole("heading", { name: "Discard unsaved changes?" })).toBeVisible();
 
     await page.getByRole("button", { name: "Keep editing" }).click();
     await expect(page.getByLabel("Partner 1 — name")).toHaveValue("Unsaved");
+  });
+
+  test("autosave persists an edit without an explicit save", async ({ page }) => {
+    await signUp(page);
+    await createInvitation(page);
+
+    await page.getByRole("tab", { name: "Content" }).click();
+    await page.getByLabel("Partner 1 — name").fill("Autosaved");
+
+    // No Save click: the debounce flushes on its own and the button
+    // returns to its idle (nothing-outstanding) state.
+    await expect(page.getByRole("button", { name: "Save draft" })).toBeDisabled({
+      timeout: 15_000,
+    });
+
+    // Survives a reload, which is the only proof that matters.
+    await page.reload();
+    await expect(page.getByLabel("Partner 1 — name")).toHaveValue("Autosaved", {
+      timeout: 15_000,
+    });
   });
 
   test("a foreign invitation id is not reachable", async ({ page }) => {

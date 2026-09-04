@@ -3,26 +3,7 @@ import { DateTimePicker } from "@mantine/dates";
 
 import { useEditor } from "./InvitationEditor";
 import { LimitedField, LimitedList } from "../components/LimitedField";
-
-/** ISO-8601 with an explicit offset, which is what the theme requires.
- *  Derived from the picker's local value plus the browser's offset. */
-function toIsoWithOffset(date: Date | null): string {
-  if (!date) return "";
-  const pad = (n: number) => String(Math.floor(Math.abs(n))).padStart(2, "0");
-  const offsetMin = -date.getTimezoneOffset();
-  const sign = offsetMin >= 0 ? "+" : "-";
-  return (
-    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
-    `T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}` +
-    `${sign}${pad(offsetMin / 60)}:${pad(offsetMin % 60)}`
-  );
-}
-
-function fromIso(iso: unknown): Date | null {
-  if (typeof iso !== "string" || !iso) return null;
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? null : d;
-}
+import { fromIso, toIsoWithOffset } from "../lib/datetime";
 
 export function ContentPanel() {
   const { config, update, fieldErrors } = useEditor();

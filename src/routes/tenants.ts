@@ -20,10 +20,11 @@ import {
   requireUser,
 } from "../lib/authz.js";
 import { starterConfig } from "../themes/starter.js";
+import { normalizeLocale } from "../lib/locale.js";
+import { loadInvitationForDraft, writeDraft } from "../lib/drafts.js";
 import {
   parseLimit,
   parseOffset,
-  validateDraft,
   validateSlug,
   validateThemeId,
   validateTitle,
@@ -282,14 +283,15 @@ tenants.post("/:tenantId/invitations", async (c) => {
   // Seed neutral placeholder content so a new invitation renders as an
   // unfinished invitation rather than an empty canvas — and, importantly,
   // never as the frozen fixture's real couple.
-  const starter = JSON.stringify(starterConfig());
+  const starter = JSON.stringify(starterConfig(theme.value));
+  const locale = normalizeLocale(body.locale);
 
   try {
     await c.env.DB.prepare(
       `INSERT INTO invitations
          (id, tenant_id, title, slug, theme_id, status, draft_json, draft_updated_at,
-          created_at, updated_at, created_by)
-       VALUES (?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?)`
+          draft_version, locale, created_at, updated_at, created_by)
+       VALUES (?, ?, ?, ?, ?, 'draft', ?, ?, 1, ?, ?, ?, ?)`
     )
       .bind(
         id,
@@ -299,6 +301,7 @@ tenants.post("/:tenantId/invitations", async (c) => {
         theme.value,
         starter,
         now,
+        locale,
         now,
         now,
         access.auth.user.id
@@ -336,6 +339,9 @@ invitations.get("/:invitationId", async (c) => {
   const invitation = await c.env.DB.prepare(
     `SELECT id, tenant_id AS tenantId, title, slug, theme_id AS themeId, status,
             draft_json AS draftJson, published_revision_id AS publishedRevisionId,
+            draft_version AS draftVersion, locale,
+            share_title AS shareTitle, share_description AS shareDescription,
+            share_image_asset_id AS shareImageAssetId,
             media_bytes AS mediaBytes, rsvp_count AS rsvpCount,
             created_at AS createdAt, updated_at AS updatedAt, published_at AS publishedAt
      FROM invitations WHERE id = ?`
@@ -369,11 +375,42 @@ invitations.patch("/:invitationId", async (c) => {
     values.push(slug.value);
   }
 
+  if (body.locale !== undefined) {
+    sets.push("locale = ?");
+    values.push(normalizeLocale(body.locale));
+  }
+
+  for (const key of ["share_title", "shareTitle"]) {
+    if ((body as Record<string, unknown>)[key] !== undefined) {
+      const v = (body as Record<string, unknown>)[key];
+      sets.push("share_title = ?");
+      values.push(typeof v === "string" ? v.slice(0, 120) || null : null);
+      break;
+    }
+  }
+  for (const key of ["share_description", "shareDescription"]) {
+    if ((body as Record<string, unknown>)[key] !== undefined) {
+      const v = (body as Record<string, unknown>)[key];
+      sets.push("share_description = ?");
+      values.push(typeof v === "string" ? v.slice(0, 300) || null : null);
+      break;
+    }
+  }
+
+  // Deprecated legacy draft path: routed through the same canonical
+  // service so validation is identical to PUT /draft. Prefer PUT /draft
+  // with expectedVersion for concurrency protection.
   if (body.draft !== undefined) {
-    const draft = validateDraft(body.draft);
-    if (!draft.ok) return fail(draft.error);
-    sets.push("draft_json = ?", "draft_updated_at = ?", "draft_updated_by = ?");
-    values.push(draft.value, nowMs(), access.auth.user.id);
+    const stored = await loadInvitationForDraft(c.env, access.invitationId);
+    if (!stored) return fail("not_found", 404);
+    const result = await writeDraft(c.env, stored, body.draft, {
+      expectedVersion: null,
+      updatedBy: access.auth.user.id,
+    });
+    if (!result.ok) {
+      if (result.error === "draft_conflict") return fail("draft_conflict", 409, { draftVersion: result.draftVersion });
+      return fail("invalid_config", 422, { errors: result.errors ?? [] });
+    }
   }
 
   if (!sets.length) return fail("nothing_to_update");

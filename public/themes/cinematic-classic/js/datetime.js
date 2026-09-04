@@ -15,6 +15,23 @@ export function parseWeddingDate(iso) {
   return date;
 }
 
+/** Secure-context-safe UID (crypto.randomUUID needs HTTPS/localhost). */
+export function icsUid() {
+  try {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return crypto.randomUUID();
+    }
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = [...bytes].map((b) => b.toString(16).padStart(2, "0")).join("");
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+  } catch {
+    return `fallback-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e9).toString(36)}`;
+  }
+}
+
 /**
  * The wedding's own calendar fields, read in the wedding's timezone
  * rather than the visitor's, so a guest in another timezone still
@@ -93,7 +110,7 @@ export function buildIcsUrl({ date, durationHours, summary, description, locatio
     "PRODID:-//wedding-invite//EN",
     "CALSCALE:GREGORIAN",
     "BEGIN:VEVENT",
-    `UID:${crypto.randomUUID()}@wedding-invite`,
+    `UID:${icsUid()}@wedding-invite`,
     `DTSTAMP:${stamp(new Date())}`,
     `DTSTART:${stamp(date)}`,
     `DTEND:${stamp(end)}`,

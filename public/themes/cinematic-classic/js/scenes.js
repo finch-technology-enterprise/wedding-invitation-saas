@@ -42,7 +42,7 @@ function seal() {
  * @param {string} className
  * @param {string} label  shown while the slot is unfilled
  */
-function photo(slot, className, label) {
+function photo(slot, className, label, { eager = false } = {}) {
   const frame = el("div", {
     class: `photo ${className}`.trim(),
     style: { "--ratio": slot.ratio },
@@ -56,11 +56,15 @@ function photo(slot, className, label) {
     return frame;
   }
 
+  // V2: only the opening frame is eager (LCP). Everything below the fold
+  // is lazy so first paint does not compete with unseen photos; the
+  // placeholder keeps the same aspect ratio, so no layout shift.
   const img = el("img", {
     src: slot.src,
     alt: slot.alt || "",
     decoding: "async",
-    loading: "eager",
+    loading: eager ? "eager" : "lazy",
+    ...(eager ? { fetchpriority: "high" } : {}),
   });
   // Focal point, when the published config supplies one. Left unset
   // otherwise so the stylesheet's own object-position keeps applying —
@@ -92,7 +96,7 @@ function sceneCover(w, parts) {
   // as the reference does. Stacking type above a shorter image instead
   // reads as a web page hero rather than an invitation plate.
   return el("section", { class: "scene", id: "scene-cover" }, [
-    photo(w.photos.hero, "cover__photo", "hero"),
+    photo(w.photos.hero, "cover__photo", "hero", { eager: true }),
     reveal(el("div", { class: "cover__type" }, [
       el("p", { class: "t-title cover__title", text: c.bracket }),
       el("p", { class: "t-latin cover__welcome", text: c.welcome }),

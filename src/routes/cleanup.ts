@@ -205,6 +205,8 @@ export async function deleteInvitation(
         `DELETE FROM rsvp_answers WHERE submission_id IN
            (SELECT id FROM rsvp_submissions WHERE invitation_id = ?)`
       ).bind(invitationId),
+      env.DB.prepare("DELETE FROM guests WHERE invitation_id = ?").bind(invitationId),
+      env.DB.prepare("DELETE FROM guest_parties WHERE invitation_id = ?").bind(invitationId),
       env.DB.prepare("DELETE FROM rsvp_submissions WHERE invitation_id = ?").bind(invitationId),
       env.DB.prepare(
         `DELETE FROM rsvp_fields WHERE form_id IN
@@ -212,10 +214,11 @@ export async function deleteInvitation(
       ).bind(invitationId),
       env.DB.prepare("DELETE FROM rsvp_forms WHERE invitation_id = ?").bind(invitationId),
       env.DB.prepare("DELETE FROM preview_tokens WHERE invitation_id = ?").bind(invitationId),
+      env.DB.prepare("DELETE FROM revision_assets WHERE invitation_id = ?").bind(invitationId),
       env.DB.prepare("DELETE FROM media_assets WHERE invitation_id = ?").bind(invitationId),
       // Release the pointer before deleting the revisions it references.
       env.DB.prepare(
-        "UPDATE invitations SET published_revision_id = NULL WHERE id = ?"
+        "UPDATE invitations SET published_revision_id = NULL, share_image_asset_id = NULL WHERE id = ?"
       ).bind(invitationId),
       env.DB.prepare("DELETE FROM invitation_revisions WHERE invitation_id = ?").bind(invitationId),
       env.DB.prepare("DELETE FROM invitations WHERE id = ?").bind(invitationId),

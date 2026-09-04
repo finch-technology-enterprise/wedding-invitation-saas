@@ -35,16 +35,10 @@ async function loadAsset(env: Env, assetId: string): Promise<AssetRow | null> {
     .first<AssetRow>();
 }
 
-/** Published assets are listed in the live revision's media manifest. */
+/** Published assets are listed in the live revision's relational membership. */
 async function isPublished(env: Env, assetId: string, invitationId: string): Promise<boolean> {
-  const row = await env.DB.prepare(
-    `SELECT 1 AS hit FROM invitations i
-     JOIN invitation_revisions r ON r.id = i.published_revision_id
-     WHERE i.id = ? AND i.status = 'published' AND r.media_manifest_json LIKE ?`
-  )
-    .bind(invitationId, `%"${assetId}"%`)
-    .first<{ hit: number }>();
-  return row !== null;
+  const { isAssetInLiveRevision } = await import("../lib/revisionAssets.js");
+  return isAssetInLiveRevision(env, invitationId, assetId);
 }
 
 /**

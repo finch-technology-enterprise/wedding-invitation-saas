@@ -1,9 +1,36 @@
-import { Badge, Card, Group, Skeleton, Stack, Table, Text, Title } from "@mantine/core";
+import { Badge, Button, Card, Group, Skeleton, Stack, Table, Text, Title } from "@mantine/core";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { notifications } from "@mantine/notifications";
 
 import { useSystem } from "./queries";
+import { api } from "../lib/api";
 
 export function SystemView() {
   const system = useSystem();
+  const qc = useQueryClient();
+  const runs = useQuery({
+    queryKey: ["p", "housekeeping"],
+    queryFn: () =>
+      api.get<{
+        ok: true;
+        runs: Array<{ id: string; kind: string; startedAt: number; deleted: number; ok: number; error: string | null }>;
+      }>("/platform/housekeeping/runs"),
+  });
+  const runNow = useMutation({
+    mutationFn: () =>
+      api.post<{ ok: true; deleted: number; results: Array<{ kind: string; deleted: number }> }>(
+        "/platform/housekeeping/run"
+      ),
+    onSuccess: (res) => {
+      notifications.show({
+        message: `Housekeeping complete — ${res.deleted} rows reclaimed`,
+        color: "green",
+      });
+      qc.invalidateQueries({ queryKey: ["p", "housekeeping"] });
+    },
+    onError: () => notifications.show({ message: "Housekeeping failed", color: "red" }),
+  });
+
   if (system.isLoading) return <Skeleton height={280} />;
 
   const { mode, bindings, settings, passwordHashing } = system.data!;
@@ -73,6 +100,30 @@ export function SystemView() {
         <Text size="xs" c="dimmed" mt="sm">
           Secrets and credentials are never exposed here.
         </Text>
+      </Card>
+
+      <Card withBorder padding="md">
+        <Group justify="space-between" align="center">
+          <Title order={5}>Retention housekeeping</Title>
+          <Button size="xs" loading={runNow.isPending} onClick={() => runNow.mutate()}>
+            Run now
+          </Button>
+        </Group>
+        <Text size="sm" c="dimmed" mt={4}>
+          Purges expired sessions, rate-limit buckets, used auth tokens, expired preview tokens
+          and old audit events in bounded batches. Invitations, revisions, media, RSVPs and
+          guests are never touched. Also runs on a schedule when a cron trigger is configured.
+        </Text>
+        {(runs.data?.runs ?? []).slice(0, 5).map((r) => (
+          <Group key={r.id} justify="space-between" mt="xs">
+            <Text size="sm">
+              {r.kind} · {r.deleted} rows
+            </Text>
+            <Badge color={r.ok ? "green" : "red"} variant="light">
+              {r.ok ? "ok" : "failed"}
+            </Badge>
+          </Group>
+        ))}
       </Card>
     </Stack>
   );

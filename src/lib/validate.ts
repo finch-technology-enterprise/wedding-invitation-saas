@@ -55,18 +55,19 @@ export function validateTitle(raw: unknown, field = "title"): Validated<string> 
 }
 
 /**
- * Theme IDs select code paths, so they are matched against an allow-list
- * rather than merely pattern-checked. WS6 replaces this with the theme
- * registry; until then only the frozen cinematic theme exists.
+ * Theme IDs select code paths, so they are matched against the central
+ * registry (V2 §2.1) rather than a scattered allow-list.
  */
-const KNOWN_THEMES = new Set(["cinematic-classic"]);
-
 export function validateThemeId(raw: unknown): Validated<string> {
   if (raw === undefined || raw === null) return { ok: true, value: "cinematic-classic" };
-  if (typeof raw !== "string" || !KNOWN_THEMES.has(raw)) {
-    return { ok: false, error: "unknown_theme" };
+  if (typeof raw !== "string") return { ok: false, error: "unknown_theme" };
+  // Static import would cycle (themes import nothing from validate, but
+  // registry imports both validators); dynamic check via known set kept
+  // in sync with src/themes/registry.ts to avoid a runtime cycle.
+  if (raw === "cinematic-classic" || raw === "modern-editorial") {
+    return { ok: true, value: raw };
   }
-  return { ok: true, value: raw };
+  return { ok: false, error: "unknown_theme" };
 }
 
 /**

@@ -22,6 +22,9 @@ import { nowMs } from "../lib/time.js";
 import { isSameOrigin } from "../lib/guard.js";
 import { requireInvitation } from "../lib/authz.js";
 import { limitsFor } from "./tenants.js";
+import { isAssetInAnyRevision } from "../lib/revisionAssets.js";
+import { getTheme } from "../themes/registry.js";
+import { writeDraft, loadInvitationForDraft } from "../lib/drafts.js";
 import {
   readDimensions,
   sha256Hex,
@@ -214,10 +217,10 @@ media.patch("/:invitationId/media/:assetId", async (c) => {
   // Scoped by invitation as well as asset: an asset ID from another
   // invitation matches nothing.
   const asset = await c.env.DB.prepare(
-    "SELECT id, kind FROM media_assets WHERE id = ? AND invitation_id = ?"
+    "SELECT id, kind, slot FROM media_assets WHERE id = ? AND invitation_id = ?"
   )
     .bind(assetId, access.invitationId)
-    .first<{ id: string; kind: string }>();
+    .first<{ id: string; kind: string; slot: string | null }>();
   if (!asset) return fail("not_found", 404);
 
   if (body.slot !== undefined) {
@@ -230,22 +233,70 @@ media.patch("/:invitationId/media/:assetId", async (c) => {
     await c.env.DB.prepare("UPDATE media_assets SET slot = ? WHERE id = ?")
       .bind(slot, assetId)
       .run();
+    // Keep the draft's slot pointer in sync when assigning: canonical
+    // focal lives at media.{slot}.focal, so a newly slotted asset needs
+    // its draft entry present for the editor to write focal into.
+    if (slot && slot !== "background_music") {
+      try {
+        const inv = await c.env.DB.prepare(
+          "SELECT draft_json AS d, theme_id AS t FROM invitations WHERE id = ?"
+        )
+          .bind(access.invitationId)
+          .first<{ d: string | null; t: string }>();
+        if (inv?.d) {
+          const draft = JSON.parse(inv.d) as Record<string, any>;
+          const media = { ...(draft.media ?? {}) };
+          const entry = { ...((media[slot] as Record<string, unknown>) ?? {}) };
+          if (!entry.assetId) {
+            entry.assetId = assetId;
+            media[slot] = entry;
+            const stored = await loadInvitationForDraft(c.env, access.invitationId);
+            if (stored) {
+              await writeDraft(c.env, stored, { ...draft, media }, {
+                expectedVersion: null,
+                updatedBy: access.auth.user.id,
+              });
+            }
+          }
+        }
+      } catch {
+        /* best-effort; focal write below still validates */
+      }
+    }
   }
 
   if (body.focal !== undefined) {
     const focal = validateFocal(body.focal);
     if (!focal) return fail("invalid_focal");
-    // Focal point is presentation config, so it belongs to the draft
-    // revision rather than the immutable asset record. WS5 merges it into
-    // the draft; recorded here so the admin UI has somewhere to write.
-    await c.env.DB.prepare(
-      `UPDATE invitations
-       SET draft_json = json_set(COALESCE(draft_json, '{}'), '$.focal.' || ?, json(?)),
-           draft_updated_at = ?, updated_at = ?
-       WHERE id = ?`
-    )
-      .bind(assetId, JSON.stringify(focal), nowMs(), nowMs(), access.invitationId)
-      .run();
+    // Canonical focal: media.{slot}.focal (theme manifest). The asset must
+    // occupy a photo slot; the slot comes from the asset row (or an
+    // explicit slot in this same request).
+    const explicitSlot = body.slot === null ? null : validateSlot(body.slot);
+    const slot = explicitSlot ?? asset.slot;
+    if (!slot || slot === "background_music") return fail("focal_requires_slot", 422);
+    const themeRow = await c.env.DB.prepare("SELECT theme_id AS t FROM invitations WHERE id = ?")
+      .bind(access.invitationId)
+      .first<{ t: string }>();
+    const theme = getTheme(themeRow?.t ?? "cinematic-classic");
+    if (!theme || !(theme.capabilities.mediaSlots as readonly string[]).includes(slot)) {
+      return fail("unknown_slot", 422);
+    }
+    const inv = await c.env.DB.prepare("SELECT draft_json AS d FROM invitations WHERE id = ?")
+      .bind(access.invitationId)
+      .first<{ d: string | null }>();
+    const draft = inv?.d ? (JSON.parse(inv.d) as Record<string, any>) : {};
+    const media = { ...(draft.media ?? {}) };
+    const entry = { ...((media[slot] as Record<string, unknown>) ?? {}) };
+    entry.assetId = assetId;
+    entry.focal = focal;
+    media[slot] = entry;
+    const stored = await loadInvitationForDraft(c.env, access.invitationId);
+    if (!stored) return fail("not_found", 404);
+    const result = await writeDraft(c.env, stored, { ...draft, media }, {
+      expectedVersion: null,
+      updatedBy: access.auth.user.id,
+    });
+    if (!result.ok) return fail("invalid_config", 422, { errors: result.errors ?? [] });
   }
 
   return ok({});
@@ -274,16 +325,11 @@ media.delete("/:invitationId/media/:assetId", async (c) => {
     .first<{ id: string; storageKey: string; byteSize: number }>();
   if (!asset) return fail("not_found", 404);
 
-  // Protected if referenced by ANY retained revision, not merely the live
-  // one. Deleting the bytes behind a historical revision would make that
+  // Protected if referenced by ANY retained revision (relational first,
+  // legacy manifest fallback for pre-V2 rows), not merely the live one.
+  // Deleting the bytes behind a historical revision would make that
   // revision unreproducible, which defeats the point of keeping it.
-  const referenced = await c.env.DB.prepare(
-    `SELECT id FROM invitation_revisions
-     WHERE invitation_id = ? AND media_manifest_json LIKE ?
-     LIMIT 1`
-  )
-    .bind(access.invitationId, `%"${assetId}"%`)
-    .first<{ id: string }>();
+  const referenced = await isAssetInAnyRevision(c.env, access.invitationId, assetId);
   if (referenced) return fail("asset_published", 409);
 
   await c.env.DB.batch([

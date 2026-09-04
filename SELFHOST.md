@@ -54,7 +54,9 @@ name, update `r2_buckets[0].bucket_name`.
 npx wrangler d1 migrations apply invite-platform --remote
 ```
 
-This creates the full platform schema. Confirm it:
+This applies every file in `migrations/` in order. Fresh clones run
+`0001_platform.sql`, `0002_auth_tokens.sql`, and
+`0003_v2_foundation.sql`. Confirm it:
 
 ```sh
 npx wrangler d1 execute invite-platform --remote \
@@ -62,7 +64,8 @@ npx wrangler d1 execute invite-platform --remote \
 ```
 
 You should see `users`, `tenants`, `invitations`, `media_assets`,
-`rsvp_*` and friends.
+`rsvp_*`, plus V2 tables `revision_assets`, `guest_parties`, `guests`,
+and `housekeeping_runs`.
 
 ## 5. Build and deploy
 
@@ -133,6 +136,25 @@ npx wrangler deploy
 Migrations are additive and tracked by Wrangler; applying twice is safe.
 Read the release notes before upgrading across a major version.
 
+### From v0.1.x
+
+`0003_v2_foundation.sql` is additive: new columns and tables, no `DROP`,
+no table rebuild. Existing published invitations keep working.
+
+- `revision_assets` is empty until the next publish (or an application
+  backfill). Public media still resolves through the legacy
+  `media_manifest_json` snapshot.
+- Legacy `draft.focal.{assetId}` migrates to `media.{slot}.focal` on the
+  next draft write.
+- Anonymous slug-scoped RSVP is unchanged. Party tokens and idempotency
+  keys are optional.
+- Default invitation locale is `zh-CN`. Set it per invitation in the
+  editor.
+
+Do not apply migrations to production as a side effect of local
+development. Local D1 is `--local`; remote is `--remote`, and they do
+not share state.
+
 ---
 
 ## Secrets
@@ -171,8 +193,21 @@ R2 objects are not covered by that. If invitation photography matters to
 you, mirror the bucket separately — `rclone` and the S3-compatible API
 both work.
 
-Nothing in this platform deletes anything on a schedule. Invitations and
-media persist until someone deliberately removes them.
+Invitations, media, RSVPs, and guests persist until someone deletes them.
+
+Housekeeping (optional) purges only ephemeral rows: expired sessions,
+stale rate-limit buckets, used or expired auth tokens, expired preview
+tokens, and audit events older than a year. The Worker exports a
+`scheduled` handler; `wrangler.jsonc.example` does not attach a cron.
+To run it on a schedule, add a trigger, for example:
+
+```jsonc
+"triggers": { "crons": ["0 3 * * *"] }
+```
+
+Operators can also run it from `/platform-admin` or
+`POST /api/v1/platform/housekeeping/run`. Locally there is no cron;
+use that endpoint.
 
 ---
 

@@ -33,7 +33,19 @@ function messageForError(code, copy) {
   }
 }
 
-export function setupRsvp({ wedding, timeline, live, endpoint }) {
+export function setupRsvp({ wedding, timeline, live, endpoint, partyToken = null }) {
+  // V2 idempotency: one stable key per form instance. Retries and double
+  // taps reuse it (server dedupes); a fresh page load mints a new one, so
+  // a deliberate second reply is still possible.
+  const idempotencyKey = (() => {
+    try {
+      const bytes = new Uint8Array(16);
+      crypto.getRandomValues(bytes);
+      return [...bytes].map((b) => b.toString(16).padStart(2, "0")).join("");
+    } catch {
+      return `k-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e9).toString(36)}`;
+    }
+  })();
   const copy = wedding.copy.rsvp;
 
   const form = $("#rsvp-form");
@@ -130,6 +142,8 @@ export function setupRsvp({ wedding, timeline, live, endpoint }) {
       instagram,
       message: $("#rsvp-message", form).value.trim(),
       website: form.elements.website.value, // honeypot passthrough
+      idempotencyKey,
+      ...(partyToken ? { partyToken } : {}),
     };
 
     submit.disabled = true;

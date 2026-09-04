@@ -23,12 +23,17 @@ export interface ResolvedInvitation {
   themeId: string;
   revisionId: string;
   publishedAt: number | null;
+  locale: string;
+  shareTitle: string | null;
+  shareDescription: string | null;
+  shareImageAssetId: string | null;
   config: Record<string, unknown>;
   /** Asset IDs this revision is allowed to serve. */
   assetIds: string[];
   /** Slot → public URL, pre-resolved so the theme does no lookups. */
   mediaUrls: Record<string, string>;
   isPreview: boolean;
+  party?: { id: string; title: string } | null;
 }
 
 interface Row {
@@ -39,11 +44,15 @@ interface Row {
   themeId: string;
   revisionId: string;
   publishedAt: number | null;
+  locale: string;
+  shareTitle: string | null;
+  shareDescription: string | null;
+  shareImageAssetId: string | null;
   configJson: string;
   mediaManifestJson: string;
 }
 
-function build(row: Row, isPreview: boolean): ResolvedInvitation {
+function build(row: Row, isPreview: boolean, party?: { id: string; title: string } | null): ResolvedInvitation {
   const config = JSON.parse(row.configJson) as Record<string, any>;
   const assetIds = JSON.parse(row.mediaManifestJson) as string[];
 
@@ -72,10 +81,15 @@ function build(row: Row, isPreview: boolean): ResolvedInvitation {
     themeId: row.themeId,
     revisionId: row.revisionId,
     publishedAt: row.publishedAt,
+    locale: row.locale ?? "zh-CN",
+    shareTitle: row.shareTitle ?? null,
+    shareDescription: row.shareDescription ?? null,
+    shareImageAssetId: row.shareImageAssetId ?? null,
     config,
     assetIds,
     mediaUrls,
     isPreview,
+    party: party ?? null,
   };
 }
 
@@ -85,6 +99,9 @@ function build(row: Row, isPreview: boolean): ResolvedInvitation {
 const SELECT = `
   SELECT i.id AS invitationId, i.tenant_id AS tenantId, i.slug, i.title,
          i.theme_id AS themeId, i.published_at AS publishedAt,
+         i.locale AS locale, i.share_title AS shareTitle,
+         i.share_description AS shareDescription,
+         i.share_image_asset_id AS shareImageAssetId,
          r.id AS revisionId, r.config_json AS configJson,
          r.media_manifest_json AS mediaManifestJson
   FROM invitations i
@@ -122,6 +139,9 @@ export async function resolvePreviewInvitation(
   const row = await env.DB.prepare(
     `SELECT i.id AS invitationId, i.tenant_id AS tenantId, i.slug, i.title,
             i.theme_id AS themeId, i.published_at AS publishedAt,
+            i.locale AS locale, i.share_title AS shareTitle,
+            i.share_description AS shareDescription,
+            i.share_image_asset_id AS shareImageAssetId,
             i.draft_json AS draftJson, p.id AS tokenId
      FROM preview_tokens p
      JOIN invitations i ON i.id = p.invitation_id
@@ -136,6 +156,10 @@ export async function resolvePreviewInvitation(
       title: string;
       themeId: string;
       publishedAt: number | null;
+      locale: string;
+      shareTitle: string | null;
+      shareDescription: string | null;
+      shareImageAssetId: string | null;
       draftJson: string | null;
       tokenId: string;
     }>();
@@ -158,6 +182,10 @@ export async function resolvePreviewInvitation(
       title: row.title,
       themeId: row.themeId,
       publishedAt: row.publishedAt,
+      locale: row.locale ?? "zh-CN",
+      shareTitle: row.shareTitle ?? null,
+      shareDescription: row.shareDescription ?? null,
+      shareImageAssetId: row.shareImageAssetId ?? null,
       // Previews are keyed by token, not by a revision that does not exist.
       revisionId: `draft-${row.tokenId}`,
       configJson: row.draftJson,

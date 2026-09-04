@@ -1,11 +1,13 @@
 # Invitation platform
 
-A cinematic wedding-invitation platform that runs entirely on Cloudflare:
-one Worker, one D1 database, one R2 bucket.
+A wedding-invitation platform that runs entirely on Cloudflare: one Worker,
+one D1 database, one R2 bucket.
 
-Guests get a slow vertical film — full-bleed photography, a flip countdown
-and an RSVP form the canvas parks itself on. Couples get an admin console
-to write it. Operators get an inventory and a manual cleanup tool.
+Two guest themes ship today. **Cinematic Classic** is a slow vertical film
+— full-bleed photography, a flip countdown, and an RSVP the canvas parks
+itself on. **Modern Editorial** is a quieter magazine layout with
+configurable tokens. Couples write in an autosaving admin console.
+Operators get inventory, housekeeping, and cleanup.
 
 <p align="center">
   <img src="docs/screenshots/invitation-cover.png" width="240" alt="The opening plate: title and date over a full-bleed photograph" />
@@ -53,20 +55,33 @@ the original bytes are never re-encoded.
 
 ## What it does
 
+- **Two themes:** `cinematic-classic` (frozen visual baselines) and
+  `modern-editorial` (tokens, type preset, optional sections)
 - **Multiple invitations per workspace**, each with its own public link
 - **Draft → preview → publish**, where publishing is an atomic pointer
   flip onto an immutable revision, so a guest never sees half an edit
+- **Autosave with conflict handling** — the editor writes a versioned
+  draft; a stale tab gets `409 draft_conflict` instead of overwriting
 - **Preview links** you can send to a partner — no account needed, scoped
   to only the media that draft references
 - **Media** in R2 under immutable keys: replacing a photo mints a new
   object, so a published invitation keeps the exact bytes it shipped
+- **Locales** `en`, `zh-CN`, `zh-TW`, `ms` for system copy (`<html lang>`,
+  countdown, RSVP chrome). Tenant-written content is never translated
 - **Configurable RSVP** with custom questions, validated against the
-  schema that was published rather than the one being edited
-- **CSV export** with spreadsheet-formula neutralisation
-- **Operator console** for users, workspaces, storage and manual cleanup
+  schema that was published rather than the one being edited. Retries
+  carry an idempotency key so a double-tap is one reply
+- **Guest parties** with personalized links (`/i/{slug}?party=…`), CSV
+  import (preview then commit), and door check-in
+- **CSV export** of replies, with spreadsheet-formula neutralisation
+- **Self-service delete and export** of an invitation you own
+- **Operator console** for users, workspaces, storage, housekeeping, and
+  manual cleanup
 
-Nothing expires. No cron deletes anything. Invitations persist until
-someone deliberately removes them.
+Invitations persist until someone deletes them. A scheduled housekeeping
+job, if you attach a cron trigger, purges expired sessions, rate-limit
+rows, used auth tokens, expired preview tokens, and old audit events. It
+never deletes invitations, media, RSVPs, or guests.
 
 ---
 
@@ -140,12 +155,14 @@ npm run dev
 | `npm run test:admin` | Admin + operator browser suite |
 | `npm run deploy` | Builds, then deploys |
 
-### The public invitation is frozen
+### The cinematic invitation is frozen
 
 `public/themes/cinematic-classic/` reproduces an accepted design, guarded
 by screenshot baselines at 375/390/430 plus desktop. Changes there are
-expected to be adapter seams, not redesigns. If you want different
-visuals, add a theme — see **[THEMES.md](THEMES.md)**.
+adapter seams, not redesigns. Do not casually update those snapshots.
+
+`modern-editorial` has its own suite and snapshots. A third look is a
+new theme — see **[THEMES.md](THEMES.md)**.
 
 ---
 
@@ -155,7 +172,7 @@ visuals, add a theme — see **[THEMES.md](THEMES.md)**.
 |---|---|
 | **[SELFHOST.md](SELFHOST.md)** | Deploy it on your own account |
 | **[CONFIGURATION.md](CONFIGURATION.md)** | Modes, bindings, quotas, email |
-| **[THEMES.md](THEMES.md)** | Theme contract and adding Theme #2 |
+| **[THEMES.md](THEMES.md)** | Theme registry and adding Theme #3 |
 | **[SECURITY.md](SECURITY.md)** | Auth, isolation, reporting a vulnerability |
 | **[CONTRIBUTING.md](CONTRIBUTING.md)** | Setup, tests, expectations |
 

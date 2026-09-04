@@ -1,0 +1,272 @@
+/* Modern Editorial / Quiet Luxury — design tokens + layout.
+ *
+ * Everything flows from --paper/--ink/--accent set inline from the
+ * published tokens. No gradients, no clip-art, no card stacks.
+ */
+
+:root {
+  --paper: #ffffff;
+  --ink: #1a1a1a;
+  --accent: #1a1a1a;
+  --muted: #6f6a61;
+  --rule: #e5e0d5;
+  --serif: "Newsreader", "Noto Serif SC", Georgia, serif;
+  --sans: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-body: var(--sans);
+  --font-display: var(--serif);
+  --measure: 38rem;
+}
+
+* { box-sizing: border-box; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+body.type-serif { --font-body: var(--serif); }
+body.type-sans { --font-display: var(--sans); }
+
+.visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+#editorial {
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: 0 1.5rem 5rem;
+}
+
+.party-greeting {
+  margin: 1rem auto 0;
+  max-width: var(--measure);
+  text-align: center;
+  font-size: 0.9rem;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+/* ---- hero ---- */
+
+.hero { padding: 4rem 0 3rem; text-align: center; }
+.hero__kicker {
+  margin: 0 0 1rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.hero__title {
+  margin: 0 0 1rem;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(2.4rem, 10vw, 3.6rem);
+  line-height: 1.12;
+  letter-spacing: 0.01em;
+}
+.hero__subtitle {
+  margin: 0 auto;
+  max-width: 30rem;
+  color: var(--muted);
+  font-size: 1.02rem;
+}
+.hero__date {
+  margin: 1.6rem 0 0;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  letter-spacing: 0.06em;
+}
+.hero__cover { margin: 2.4rem 0 0; }
+.hero__cover img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+}
+
+/* ---- sections ---- */
+
+.section { padding: 3.2rem 0; border-top: 1px solid var(--rule); }
+.section__kicker {
+  margin: 0 0 0.6rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.section__title {
+  margin: 0 0 1.2rem;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(1.6rem, 6vw, 2.1rem);
+  line-height: 1.25;
+}
+.section p.body { margin: 0 0 1rem; max-width: var(--measure); }
+.couple-names {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  margin: 0 0 1rem;
+}
+.couple-names .amp { color: var(--muted); margin: 0 0.6em; }
+
+/* ---- countdown ---- */
+
+.countdown {
+  display: flex;
+  gap: 1.6rem;
+  margin: 1.6rem 0 0;
+}
+.countdown__cell { text-align: left; }
+.countdown__value {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.countdown__unit {
+  margin-top: 0.3rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ---- schedule ---- */
+
+.schedule { list-style: none; margin: 1.4rem 0 0; padding: 0; }
+.schedule__item {
+  display: grid;
+  grid-template-columns: 4.5rem 1fr;
+  gap: 1rem;
+  padding: 1rem 0;
+  border-top: 1px solid var(--rule);
+}
+.schedule__time {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+.schedule__name { font-weight: 600; }
+.schedule__note { color: var(--muted); font-size: 0.95rem; }
+
+/* ---- gallery ---- */
+
+.gallery { display: grid; gap: 1rem; margin-top: 1.4rem; }
+.gallery figure { margin: 0; }
+.gallery img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  background: var(--rule);
+}
+@media (min-width: 40rem) {
+  .gallery { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* ---- venue ---- */
+
+.venue img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  margin-top: 1.2rem;
+  background: var(--rule);
+}
+.actions { display: flex; flex-wrap: wrap; gap: 0.8rem; margin-top: 1.4rem; }
+.btn {
+  appearance: none;
+  display: inline-block;
+  min-height: 44px;
+  line-height: 44px;
+  padding: 0 1.4rem;
+  border: 1px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.95rem;
+  text-decoration: none;
+  cursor: pointer;
+}
+.btn--solid { background: var(--ink); color: var(--paper); }
+.btn:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* ---- rsvp ---- */
+
+.rsvp__deadline { color: var(--muted); }
+form.rsvp { margin-top: 1.4rem; max-width: 28rem; }
+.field { margin-bottom: 1.1rem; }
+.field label { display: block; margin-bottom: 0.35rem; font-size: 0.9rem; }
+.field input[type="text"],
+.field input[type="tel"],
+.field input[type="email"],
+.field input[type="number"],
+.field textarea,
+.field select {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--rule);
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  border-radius: 0;
+}
+/* Number spinners collapse the control to its content width in some
+   engines; keep the guest-count field a real 44px touch target. */
+.field input[type="number"] {
+  max-width: 8rem;
+}
+.field textarea { min-height: 5.5rem; resize: vertical; }
+.field [aria-invalid="true"] { border-color: #a33; }
+.radio-row { display: flex; gap: 1.2rem; }
+.radio-row label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+}
+.radio-row input { width: 1.15rem; height: 1.15rem; accent-color: var(--accent); }
+.form-error { color: #a33; min-height: 1.5em; font-size: 0.92rem; }
+.form-success { border-top: 2px solid var(--accent); padding-top: 1.4rem; }
+
+/* ---- share ---- */
+
+.share { display: flex; flex-wrap: wrap; gap: 0.8rem; margin-top: 1.6rem; }
+
+/* ---- reveal ---- */
+
+@media (prefers-reduced-motion: no-preference) {
+  body.motion-subtle .reveal { opacity: 0; transform: translateY(14px); transition: opacity 0.7s ease, transform 0.7s ease; }
+  body.motion-subtle .reveal.is-visible { opacity: 1; transform: none; }
+  body.motion-gentle .reveal { opacity: 0; transform: translateY(22px); transition: opacity 0.9s ease, transform 0.9s ease; }
+  body.motion-gentle .reveal.is-visible { opacity: 1; transform: none; }
+}
+
+footer.colophon {
+  margin-top: 3rem;
+  padding-top: 1.6rem;
+  border-top: 1px solid var(--rule);
+  color: var(--muted);
+  font-size: 0.85rem;
+  text-align: center;
+}

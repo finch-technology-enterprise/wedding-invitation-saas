@@ -17,10 +17,12 @@ import { readFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import { DEMO_BOOTSTRAP, DEMO_SLUG } from "./fixture.mjs";
+import { EDITORIAL_BOOTSTRAP, EDITORIAL_SLUG } from "./editorial-fixture.mjs";
 
 const ROOT = fileURLToPath(new URL("../../public", import.meta.url));
 const PORT = Number(process.env.PORT || 8789);
 const SHELL = "/themes/cinematic-classic/index.html";
+const EDITORIAL_SHELL = "/themes/modern-editorial/index.html";
 
 const TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -46,8 +48,8 @@ function safeJson(value) {
     .replace(/\u2029/g, "\\u2029");
 }
 
-async function renderInvitation(res, bootstrap) {
-  const html = await readFile(join(ROOT, SHELL), "utf8");
+async function renderInvitation(res, bootstrap, shell = SHELL) {
+  const html = await readFile(join(ROOT, shell), "utf8");
   const inline = `<script>window.__INVITATION__=${safeJson(bootstrap)}</script>`;
   res.writeHead(200, { "content-type": TYPES[".html"] });
   res.end(html.replace("<!--BOOTSTRAP-->", inline));
@@ -58,7 +60,7 @@ createServer(async (req, res) => {
   const path = url.pathname;
 
   // Mirror the Worker's RSVP contract closely enough for UI assertions.
-  if (path === `/i/${DEMO_SLUG}/rsvp`) {
+  if (path === `/i/${DEMO_SLUG}/rsvp` || path === `/i/${EDITORIAL_SLUG}/rsvp`) {
     if (req.method !== "POST") {
       res.writeHead(405, { "content-type": "application/json" });
       res.end(JSON.stringify({ ok: false, error: "method_not_allowed" }));
@@ -83,6 +85,11 @@ createServer(async (req, res) => {
   // The public invitation route, and `/` as a convenience alias for it.
   if (path === "/" || path === `/i/${DEMO_SLUG}`) {
     await renderInvitation(res, DEMO_BOOTSTRAP);
+    return;
+  }
+
+  if (path === "/editorial" || path === `/i/${EDITORIAL_SLUG}`) {
+    await renderInvitation(res, EDITORIAL_BOOTSTRAP, EDITORIAL_SHELL);
     return;
   }
 

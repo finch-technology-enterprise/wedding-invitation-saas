@@ -42,6 +42,12 @@ const MotionPanel = lazy(() =>
   import("./routes/MotionPanel").then((m) => ({ default: m.MotionPanel }))
 );
 const RsvpPanel = lazy(() => import("./routes/RsvpPanel").then((m) => ({ default: m.RsvpPanel })));
+const GuestsPanel = lazy(() =>
+  import("./routes/GuestsPanel").then((m) => ({ default: m.GuestsPanel }))
+);
+const DesignPanel = lazy(() =>
+  import("./routes/DesignPanel").then((m) => ({ default: m.DesignPanel }))
+);
 const ResponsesPanel = lazy(() =>
   import("./routes/ResponsesPanel").then((m) => ({ default: m.ResponsesPanel }))
 );
@@ -134,6 +140,8 @@ export function App() {
             <Route path="media" element={<MediaPanel />} />
             <Route path="motion" element={<MotionPanel />} />
             <Route path="rsvp" element={<RsvpPanel />} />
+            <Route path="guests" element={<GuestsPanel />} />
+            <Route path="design" element={<DesignPanel />} />
             <Route path="responses" element={<ResponsesPanel />} />
             <Route path="sharing" element={<SharingPanel />} />
             <Route path="publish" element={<PublishPanel />} />

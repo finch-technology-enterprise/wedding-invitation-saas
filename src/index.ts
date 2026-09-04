@@ -1,26 +1,19 @@
 /**
- * Platform Worker.
+ * Platform Worker (V2).
  *
- * Routing (see arch report §D):
+ * Routing:
  *   /api/v1/*          versioned platform API (Hono sub-app)
- *   /i/{slug}          public invitation
- *   POST /i/{slug}/rsvp  public reply submission (scoped by slug, so a
- *                      reply cannot land on another invitation)
+ *   /i/{slug}          public invitation (+ ?party= personalized mode)
+ *   POST /i/{slug}/rsvp  public reply submission (idempotent)
  *   /preview/{token}   draft preview
- *   /media/{assetId}   R2 delivery (WS4)
- *   /admin/*           tenant console (React SPA built by Vite into
- *                      public/admin/). Deep links are served the same
- *                      shell so client routing survives reload; auth is
- *                      API-enforced, and the shell is inert without a
- *                      session.
- *   /platform-admin    operator console (WS9 adds platform-admin.html, which
- *                      the same clean-URL rule then serves; until then the
- *                      Worker answers 501 on asset miss).
+ *   /media/{assetId}   R2 delivery (relational membership)
+ *   /admin/*           tenant console (React SPA)
+ *   /platform-admin    operator console
  *   everything else    Static Assets
  */
 
 import { Hono } from "hono";
-import { fail, json, logFailure, ok } from "./lib/respond.js";
+import { fail, logFailure, ok } from "./lib/respond.js";
 import { deploymentMode } from "./lib/mode.js";
 import { AccessError } from "./lib/authz.js";
 import { auth } from "./routes/auth.js";
@@ -30,8 +23,11 @@ import { publish } from "./routes/publish.js";
 import { handlePublicRsvp, rsvp } from "./routes/rsvp.js";
 import { platform } from "./routes/platform.js";
 import { cleanup } from "./routes/cleanup.js";
+import { guests } from "./routes/guests.js";
+import { housekeeping, selfService, themes } from "./routes/ops.js";
 import { serveMedia } from "./routes/deliver.js";
 import { serveInvitation, servePreview } from "./routes/invite.js";
+import { recordHousekeepingRun, runHousekeeping } from "./lib/housekeeping.js";
 
 // basePath: the Worker forwards the untouched request, so routes below
 // are matched against the full /api/v1/... path.
@@ -51,15 +47,21 @@ v1.onError((err) => {
 v1.route("/auth", auth);
 v1.route("/tenants", tenants);
 v1.route("/invitations", invitations);
-// Media hangs off the invitation it belongs to, so it mounts on the same
-// prefix and resolves ownership through the same requireInvitation check.
+// Media + drafts + RSVP + guests hang off the invitation they belong to,
+// resolving ownership through the same requireInvitation check.
 v1.route("/invitations", media);
 v1.route("/invitations", publish);
 v1.route("/invitations", rsvp);
+v1.route("/invitations", guests);
 // Operator surface: a separate authorization domain, not a privileged
 // branch inside the tenant routes above.
 v1.route("/platform", platform);
 v1.route("/platform/cleanup", cleanup);
+v1.route("/platform/housekeeping", housekeeping);
+// Public theme catalogue (explicit prefix — never mount at "/").
+v1.route("/themes", themes);
+// Tenant self-service (delete/export) on the invitation prefix.
+v1.route("/invitations", selfService);
 
 // WS8+ own: rsvp configuration, platform operator API.
 v1.all("/*", (c) => fail("not_built", 501));
@@ -165,5 +167,25 @@ export default {
     }
 
     return fail("not_found", 404);
+  },
+
+  /**
+   * Cloudflare-native scheduled housekeeping (V2 §1.6). Configure with a
+   * cron trigger; safe to run frequently — every purge is batch-bounded
+   * and retry-safe, and invitation/tenant data is never touched.
+   */
+  async scheduled(_event: ScheduledEvent, env: Env): Promise<void> {
+    try {
+      const results = await runHousekeeping(env);
+      const deleted = results.reduce((n, r) => n + r.deleted, 0);
+      await recordHousekeepingRun(env, "scheduled", deleted, true);
+      console.log("housekeeping_scheduled", {
+        deleted,
+        kinds: results.map((r) => `${r.kind}:${r.deleted}`).join(","),
+      });
+    } catch (err) {
+      await recordHousekeepingRun(env, "scheduled", 0, false, String(err));
+      console.error("housekeeping_scheduled_failed", String(err).slice(0, 200));
+    }
   },
 };

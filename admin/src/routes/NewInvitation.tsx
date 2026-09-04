@@ -14,22 +14,23 @@ import {
 } from "@mantine/core";
 
 import type { ShellContext } from "../components/Shell";
-import { useCreateInvitation } from "../lib/queries";
+import { useCreateInvitation, useThemes } from "../lib/queries";
 import { ApiError } from "../lib/api";
 
-/**
- * Theme catalogue.
- *
- * One theme exists today. The chooser is a list rather than a hardcoded
- * constant so adding Theme #2 is a data change, not a rewrite of this
- * flow — but no fake themes are invented to make the list look fuller.
- */
-const THEMES = [
+/** Theme catalogue comes from the server registry (V2 §2.1) — adding a
+ *  theme is a backend data change, not a rewrite of this flow. */
+const FALLBACK_THEMES: Array<{ id: string; name: string; description: string }> = [
   {
     id: "cinematic-classic",
     name: "Cinematic Classic",
     description:
       "A slow vertical film: full-bleed photography, Chinese typography and a countdown that ends on the RSVP.",
+  },
+  {
+    id: "modern-editorial",
+    name: "Modern Editorial",
+    description:
+      "Quiet luxury magazine layout: generous whitespace, strong typography, restrained motion.",
   },
 ];
 
@@ -64,8 +65,22 @@ export function NewInvitation() {
   const { tenantId } = useOutletContext<ShellContext>();
   const navigate = useNavigate();
   const create = useCreateInvitation(tenantId);
+  const themes = useThemes();
   const [error, setError] = useState<string | null>(null);
   const [slugTouched, setSlugTouched] = useState(false);
+
+  const catalogue: Array<{ id: string; displayName: string }> = themes.data?.themes ?? [];
+  const THEMES: Array<{ id: string; name: string; description: string }> =
+    catalogue.length > 0
+      ? catalogue.map((t) => ({
+        id: t.id,
+        name: t.displayName,
+        description:
+          t.id === "modern-editorial"
+            ? "Quiet luxury magazine layout: generous whitespace, strong typography, restrained motion."
+            : "A slow vertical film: full-bleed photography, Chinese typography and a countdown that ends on the RSVP.",
+      }))
+    : FALLBACK_THEMES;
 
   const form = useForm({
     initialValues: { title: "", slug: "", themeId: THEMES[0]!.id },

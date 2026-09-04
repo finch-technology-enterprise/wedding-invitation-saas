@@ -171,13 +171,99 @@ Guest replies are the most sensitive data here.
   snippet of their input
 - The operator audit log records actions, counts and bytes, never
   invitation copy or guest answers
+- **Idempotency.** A client-generated `idempotencyKey` (8–128 of
+  `[A-Za-z0-9_-]`) is stored on the submission. A retry with the same
+  key on the same invitation returns that row (`deduped: true`) and does
+  not increment the counter. Keys are stripped before form validation.
+  Legacy clients that omit a key behave as before; SQLite unique indexes
+  allow multiple NULLs
+- **Party binding.** An optional `partyToken` is resolved to a party id
+  and stored on the row. An invalid token is ignored — the RSVP still
+  lands as a public reply, and the response does not say whether a party
+  exists
 
-**CSV export** neutralises cells beginning with `=`, `+`, `-` or `@` by
-prefixing them. Quoting alone is not protection: the quotes are consumed
-by the CSV parser and the formula still reaches the cell.
+**CSV export** of RSVP answers neutralises cells beginning with `=`,
+`+`, `-` or `@` by prefixing them. Quoting alone is not protection: the
+quotes are consumed by the CSV parser and the formula still reaches the
+cell.
 
 Deleting an invitation removes its revisions, drafts, RSVP schema,
-submissions, answers, preview tokens, media metadata and R2 objects.
+submissions, answers, preview tokens, guest parties, guests, media
+metadata and R2 objects. Tenant self-service delete requires typing
+`DELETE {title}`.
+
+---
+
+## Guest parties, personalized links, and check-in
+
+Parties group households. Each party may carry an opaque token
+(`newToken(24)`). Only the **SHA-256** of that token is stored
+(`guest_parties.token_hash`, globally unique), the same construction as
+sessions. Rotating the token replaces the hash; old links stop
+resolving.
+
+`GET /i/{slug}?party={token}`:
+
+- A valid token for that invitation injects `{ id, title }` into the
+  bootstrap payload as a greeting
+- The response is `Cache-Control: private, no-store` and
+  `X-Robots-Tag: noindex, nofollow` — personalized HTML must not sit in
+  a shared cache
+- An invalid, truncated, or foreign token is **not** a 404 and does not
+  mention guests. The Worker falls through to the ordinary public page
+  (public cache headers, no `party` in the payload)
+
+Check-in is an authenticated tenant action
+(`POST /api/v1/invitations/:id/guests/:guestId/check-in`) through
+`requireInvitation`. The party token is a lookup aid, not
+authorization. A repeat check-in returns the existing timestamp with
+`deduped: true`. Foreign invitation IDs stay 404, same as every other
+tenant route.
+
+**Guest CSV import** is tenant-authenticated. Preview and commit cap the
+body at 512 KiB and 1,000 rows. Duplicate detection is
+case-insensitive full name against existing guests; `skipDuplicates`
+defaults to true. The parser is RFC-4180 (quotes, commas, CRLF). Formula
+neutralisation still applies on RSVP CSV export; import maps name/phone/
+email/meal/dietary only.
+
+---
+
+## Revision membership and legacy media
+
+Published media access prefers `revision_assets` (revision, invitation,
+asset, slot). Pre-V2 revisions with no relational rows still resolve
+through `media_manifest_json LIKE` so a guest is not stranded. The
+manifest remains an immutable snapshot; it is no longer the
+authoritative membership index.
+
+Draft assets stay private. `/media/{assetId}` serves only assets in a
+published revision (relational or legacy), plus draft access for the
+owning workspace and for a preview token that actually references that
+asset.
+
+---
+
+## Housekeeping and logging
+
+`runHousekeeping()` deletes expired sessions, stale rate-limit rows,
+used or expired auth tokens, expired preview tokens, and audit events
+older than a year. It does not touch invitations, revisions, media,
+RSVPs, or guests.
+
+The only structured logs added in V2 are operational:
+
+```
+housekeeping_scheduled  { deleted, kinds }
+housekeeping_run        { actor, deleted, kinds }
+housekeeping_scheduled_failed  truncated error string
+```
+
+`actor` is a user id, not an email. Guest names, phones, RSVP answers,
+and party tokens are not logged.
+
+Invitation locale (`en` | `zh-CN` | `zh-TW` | `ms`) is not personal
+data; it only selects system copy.
 
 ---
 

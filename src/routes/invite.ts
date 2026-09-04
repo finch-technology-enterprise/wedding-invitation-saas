@@ -9,6 +9,7 @@
  */
 
 import { fail } from "../lib/respond.js";
+import { normalizeLocale, stringsFor, htmlLangFor } from "../lib/locale.js";
 import {
   resolvePublishedInvitation,
   resolvePreviewInvitation,
@@ -38,13 +39,21 @@ function safeJson(value: unknown): string {
 function bootstrapPayload(resolved: ResolvedInvitation) {
   // Only what the renderer needs. Tenant ID, revision internals and the
   // asset manifest stay server-side.
+  const locale = normalizeLocale(resolved.locale);
   return {
     slug: resolved.slug,
     revisionId: resolved.revisionId,
     isPreview: resolved.isPreview,
+    locale,
+    strings: stringsFor(locale),
+    party: resolved.party ?? null,
     config: resolved.config,
     mediaUrls: resolved.mediaUrls,
   };
+}
+
+function escapeAttr(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 async function loadShell(env: Env, req: Request, themeId: string): Promise<Response | null> {
@@ -69,9 +78,39 @@ async function render(
 
   // The shell carries a single marker so injection is deterministic
   // rather than a fragile string match against markup.
-  const withBootstrap = html.includes("<!--BOOTSTRAP-->")
+  let withBootstrap = html.includes("<!--BOOTSTRAP-->")
     ? html.replace("<!--BOOTSTRAP-->", inline)
     : html.replace("</head>", `${inline}</head>`);
+
+  // Invitation locale controls <html lang> (never hard-coded) + social
+  // metadata. Unpublished/preview rules are unchanged: previews stay
+  // noindex/no-store; personalized (?party=) views are private.
+  const locale = normalizeLocale(resolved.locale);
+  withBootstrap = withBootstrap.replace(/<html[^>]*>/, `<html lang="${htmlLangFor(locale)}">`);
+
+  const origin = new URL(req.url).origin;
+  const publicUrl = `${origin}/i/${resolved.slug}`;
+  const shareTitle = resolved.shareTitle || resolved.title || "Wedding Invitation";
+  const shareDescription =
+    resolved.shareDescription || (stringsFor(locale).openInvitation as string);
+  const shareImage = resolved.shareImageAssetId
+    ? `${origin}/media/${resolved.shareImageAssetId}`
+    : (resolved.mediaUrls.hero ??
+      resolved.mediaUrls.cover ??
+      Object.values(resolved.mediaUrls)[0] ??
+      null);
+  const ogTags = [
+    `<meta property="og:type" content="website">`,
+    `<meta property="og:title" content="${escapeAttr(shareTitle)}">`,
+    `<meta property="og:description" content="${escapeAttr(shareDescription)}">`,
+    `<meta property="og:url" content="${escapeAttr(publicUrl)}">`,
+    ...(shareImage ? [`<meta property="og:image" content="${escapeAttr(shareImage)}">`] : []),
+    `<meta name="twitter:card" content="summary_large_image">`,
+    `<meta name="twitter:title" content="${escapeAttr(shareTitle)}">`,
+    `<meta name="twitter:description" content="${escapeAttr(shareDescription)}">`,
+    ...(shareImage ? [`<meta name="twitter:image" content="${escapeAttr(shareImage)}">`] : []),
+  ].join("\n");
+  withBootstrap = withBootstrap.replace("</head>", `${ogTags}\n</head>`);
 
   const headers = new Headers({
     "content-type": "text/html; charset=utf-8",
@@ -83,6 +122,11 @@ async function render(
     // never be indexed or cached by a shared cache.
     headers.set("x-robots-tag", "noindex, nofollow");
     headers.set("cache-control", "private, no-store");
+  } else if (resolved.party) {
+    // Personalized guest view (?party= token): same revision, but the
+    // greeting is per-guest, so keep it out of shared caches + indexes.
+    headers.set("x-robots-tag", "noindex, nofollow");
+    headers.set("cache-control", "private, no-store");
   } else {
     // Revisions are immutable, so the revision ID is a complete cache
     // identity: publishing writes a new ID, which is a different entity.
@@ -91,7 +135,7 @@ async function render(
     headers.set("etag", `"${resolved.revisionId}"`);
   }
 
-  if (req.headers.get("if-none-match") === `"${resolved.revisionId}"` && !resolved.isPreview) {
+  if (req.headers.get("if-none-match") === `"${resolved.revisionId}"` && !resolved.isPreview && !resolved.party) {
     return new Response(null, { status: 304, headers });
   }
 
@@ -103,6 +147,23 @@ export async function serveInvitation(req: Request, env: Env, slug: string): Pro
 
   const resolved = await resolvePublishedInvitation(env, slug);
   if (!resolved) return fail("invitation_not_found", 404);
+
+  // Optional personalized mode: ?party= token displays a greeting for a
+  // guest party. Public behavior is unchanged when absent/invalid.
+  try {
+    const partyToken = new URL(req.url).searchParams.get("party");
+    if (partyToken) {
+      const { resolvePartyByToken } = await import("../lib/guests.js");
+      const party = await resolvePartyByToken(env, resolved.invitationId, partyToken).catch(
+        () => null
+      );
+      if (party) {
+        return render(env, req, { ...resolved, party });
+      }
+    }
+  } catch {
+    /* fall through to public render */
+  }
 
   return render(env, req, resolved);
 }

@@ -5,6 +5,7 @@ import { MantineProvider } from "@mantine/core";
 import { ModalsProvider } from "@mantine/modals";
 import { Notifications } from "@mantine/notifications";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { appTheme } from "./lib/theme";
 
 import "@mantine/core/styles.css";
 import "@mantine/notifications/styles.css";
@@ -30,6 +31,13 @@ const queryClient = new QueryClient({
 });
 
 /**
+ * SaaS design layer (V2 §8) on top of Mantine primitives: coherent type
+ * scale, spacing rhythm and status semantics shared by both consoles.
+ * Components stay Mantine — no hand-rolled dialogs, menus or toasts.
+ */
+const theme = appTheme;
+
+/**
  * A data router (not <BrowserRouter>) because the editor uses useBlocker
  * to confirm navigation away from unsaved edits, which only data routers
  * support. `basename` mounts the app at /admin so deep links survive a
@@ -41,10 +49,13 @@ const router = createBrowserRouter([{ path: "*", element: <App /> }], {
 
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <MantineProvider defaultColorScheme="light">
+    <MantineProvider theme={theme} defaultColorScheme="light">
       <QueryClientProvider client={queryClient}>
         <ModalsProvider>
-          <Notifications position="top-right" />
+          {/* Bottom-right: the header's primary actions (Save, Preview,
+              Publish) live top-right, and a toast there covers the very
+              control the toast is reporting on. */}
+          <Notifications position="bottom-right" />
           <RouterProvider router={router} />
         </ModalsProvider>
       </QueryClientProvider>

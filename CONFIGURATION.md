@@ -131,6 +131,8 @@ Unknown keys are rejected, not stored.
 
 Enforced in `hosted` mode only. Each tenant has a plan, and may have
 per-tenant overrides layered on top from `/platform-admin` → Workspaces.
+Invitation, media, and RSVP ceilings still go through `limitsFor()` in
+`src/routes/tenants.ts`.
 
 | Limit | Meaning |
 |---|---|
@@ -147,6 +149,11 @@ per-tenant overrides layered on top from `/platform-admin` → Workspaces.
 - `plan_hosted_free` — 1 invitation, 200 MB per workspace, 100 MB per
   invitation, 8 MB images, 15 MB audio, 500 replies
 
+V2 adds `plans.capabilities_json` and `src/lib/entitlements.ts`, which
+can also parse `maxGuests`, premium theme IDs, custom domain, analytics,
+and branding removal. Those fields are not yet consulted by handlers;
+the two shipped themes are not gated.
+
 There is a hard 64 MB ceiling on any single upload regardless of plan, so
 a request cannot exhaust the Worker's memory before quotas are consulted.
 
@@ -154,21 +161,45 @@ a request cannot exhaust the Worker's memory before quotas are consulted.
 
 ## Theme limits
 
-Content bounds live in `src/themes/cinematic-classic.ts`, not in
-configuration. They are derived from the accepted design's measured
-maxima plus headroom, and the admin reads them from the same manifest the
-server validates against. See [THEMES.md](THEMES.md).
+Content bounds live in each theme module (`src/themes/*.ts`), not in
+Worker vars. `src/themes/registry.ts` is the only catalogue. The admin
+reads the same manifest the server validates against. See
+[THEMES.md](THEMES.md).
 
 The RSVP form allows six custom questions. Beyond that the reply scene
 stops reading as an invitation.
+
+## Invitation locale
+
+Per invitation, not a Worker variable. Allowed values: `en`, `zh-CN`,
+`zh-TW`, `ms`. The column default is `zh-CN`. The value drives
+`<html lang>`, Open Graph language, and system strings (countdown, RSVP
+chrome, share labels). Tenant-authored copy is never translated.
+
+## Housekeeping
+
+Not an environment variable. Retention is fixed in
+`src/lib/housekeeping.ts`:
+
+| Kind | Kept |
+|---|---|
+| Expired or revoked sessions | 30 days |
+| Rate-limit rows | 24 hours |
+| Used or expired auth tokens | 7 days |
+| Expired preview tokens | 7 days |
+| Platform audit events | 365 days |
+
+Batches of 200, retry-safe. Invitations, revisions, media, RSVPs, and
+guests are never touched. Attach a `triggers.crons` entry if you want
+Cloudflare to invoke the `scheduled` handler; operators can also POST
+`/api/v1/platform/housekeeping/run`.
 
 ---
 
 ## What is not configurable, deliberately
 
-- **Automatic expiry.** Nothing deletes itself. Invitations persist until
-  a human removes them.
-- **Scheduled cleanup.** There is no cron. Cleanup is an operator action.
+- **Invitation expiry.** Invitations persist until a human removes them.
+- **Housekeeping retention.** The periods above are code, not vars.
 - **`prefers-reduced-motion` override.** A guest who asked their device
   to stop animating is not overridden by a tenant setting.
 - **Arbitrary theme CSS.** The theme owns its visual structure; tenants

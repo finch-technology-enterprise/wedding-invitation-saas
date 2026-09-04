@@ -1,104 +1,116 @@
-# wedding-invite — Project Workflow
+# wedding-invite — Project Workflow (V2)
 
-A cinematic Chinese H5 wedding invitation served by a single Cloudflare
-Worker with D1.
+A wedding-invitation SaaS on one Cloudflare Worker (Hono) + D1 + R2 +
+Static Assets. Two themes, guest parties, idempotent RSVP, autosaving
+editor, operator console.
 
 ## Stack
 
-- **Worker**: `src/index.ts` — API routes (`POST /api/rsvp`, key-gated
-  `GET /api/rsvps`), photo-slot handling, and static assets
-- **Static site**: `public/` — plain HTML/CSS/ES modules, no build step
-- **Content**: all wedding data lives in `public/js/content.js`
-  (`wedding`) — edit there, never in HTML/CSS/JS
-- **DB**: D1 database `invite`, migrations in `migrations/`
+- **Worker**: `src/index.ts` — versioned API (`/api/v1/*`), public
+  rendering (`/i/{slug}`, `?party=` personalized mode), previews,
+  media delivery, SPA shells, `scheduled` housekeeping.
+- **Routes**: `src/routes/` — `auth`, `tenants` (+`invitations`),
+  `media`, `publish` (draft/version/publish/preview), `rsvp`
+  (config/responses/CSV/public submit), `guests` (parties/invitees/
+  import/check-in), `platform`, `cleanup` (invitation deletion),
+  `ops` (`themes`, `platform/housekeeping`, invitation `delete`/
+  `export` self-service), `invite`, `deliver`.
+- **Libs**: `src/lib/` — `authz` (tenant choke point), `session`,
+  `password` (scrypt), `guard` (CSRF/rate), `validate` (slugs/titles;
+  theme IDs defer to the registry), `drafts` (canonical draft service +
+  optimistic concurrency), `revisionAssets` (relational membership),
+  `entitlements`, `housekeeping`, `locale` (en/zh-CN/zh-TW/ms),
+  `guests` (tokens, RFC-4180 CSV), `media`, `email`, `csv`, `rsvp`.
+- **Themes**: `src/themes/registry.ts` is authoritative
+  (`cinematic-classic`, `modern-editorial`). Each theme exports
+  `MANIFEST + validateConfig`. Never hard-code theme IDs elsewhere.
+- **Guest renderers**: `public/themes/*/` — vanilla ES modules, zero
+  dependencies (asserted by `tests/e2e/isolation.spec.ts`).
+  `cinematic-classic` is frozen (baselines); `modern-editorial` has its
+  own suite.
+- **Admin**: `admin/src/` — React 19 + Router 7 + Mantine + TanStack
+  Query. Tenant console + `platform/` operator console (separate Vite
+  entries). Shared `lib/theme.ts` design layer.
+- **DB**: D1, migrations in `migrations/` (`0001`, `0002`,
+  `0003_v2_foundation`). `tests/setup.ts` loads all three.
 
-## The invitation model
+## Canonical rules (V2)
 
-This is **not** a scrolling webpage. The document never scrolls.
+- One draft path: `writeDraft()` in `lib/drafts.ts`. `PATCH /:id`
+  `{draft}` is deprecated but routes through it. `PUT /draft` requires
+  `expectedVersion`; stale writes get `409 draft_conflict`.
+- Focal is canonical at `media.{slot}.focal`. Never write
+  `draft.focal.{assetId}` (legacy migrated on read/write).
+- Membership is relational (`revision_assets`), not
+  `media_manifest_json LIKE`. The manifest stays as a snapshot artifact.
+  Pre-V2 revisions still resolve media through the legacy fallback —
+  do not rewrite old immutable revisions to make V2 cleaner.
+- Public RSVP is `POST /i/{slug}/rsvp`. There is no guest-facing V1 RSVP
+  route to call. Submit accepts `idempotencyKey` + `partyToken`
+  (stripped before form validation). Same key → same submission
+  (`deduped: true`).
+- Invitation locale (`en|zh-CN|zh-TW|ms`) drives `<html lang>`, OG tags,
+  countdown/RSVP strings. User content is never translated.
+- Starter/seed content is neutral (`Alex & Jamie`). The frozen fixture's
+  real-couple values stay in `defaults.js` / cinematic `fixture.mjs` /
+  baselines only.
 
-- `#viewport` is a fixed, one-screen window that clips the content.
-- `#stage` is a long canvas translated vertically by
-  `public/js/timeline.js`.
-- `html { font-size: viewportWidth / 10 }`, so `1rem` is one tenth of
-  the canvas width and **everything scales proportionally**. Author new
-  styles in `rem`, not `px`.
-- The canvas drifts upward at a fixed ~46 px/s — the rate at which the
-  reference's copy stays readable — rather than over a fixed duration,
-  so editing copy does not change the reading pace. It can be dragged
-  manually and parks itself at the RSVP form. A supplied soundtrack
-  overrides the pace so the two finish together.
-- Photography and audio are gated by a `ready` flag in `content.js`:
-  unsupplied assets are never requested. See `public/assets/README.md`.
+## Do not
 
-Frontend modules:
-
-```
-public/js/
-  main.js       thin orchestration
-  content.js    ALL wedding data (single source of truth)
-  scenes.js     builds the ten scene chapters
-  timeline.js   auto-drift + drag scrubbing
-  countdown.js  flip-digit countdown
-  datetime.js   every date derivation (calendar grid included)
-  fonts.js      CJK webfont subsetting
-  audio.js      background music + control state
-  rsvp.js       form behaviour
-  dom.js        small element helpers
-```
+- Bypass `src/lib/authz.ts`. No handler writes its own membership query.
+  Platform admin is not implicit tenant membership.
+- Weaken hosted email verification to make tests pass. Mark the local D1
+  row verified the way existing suites do
+  (`UPDATE users SET email_verified = 1 WHERE email = …`). Do not add
+  application bypasses.
+- Touch cinematic frozen snapshots or `baselines/frozen-c2833d2/` unless
+  a visual change was explicitly approved, with before/after evidence.
+  Editorial snapshots live only under
+  `tests/e2e/editorial.spec.ts-snapshots/`.
+- Put personal wedding names, phones, addresses, or media into
+  starter config, seeds, editorial fixtures, CSV examples, or docs.
+- Write destructive D1 migrations (`DROP`, table rebuilds, silent data
+  loss). V2 changes are additive.
+- Apply migrations to remote/production D1 as a side effect of local
+  work. Local is `--local` only.
+- Commit secrets, `.dev.vars`, `wrangler.jsonc`, `.admin-key.local`,
+  `.wrangler/`, generated admin bundles, or `opencode.json`.
+- Log RSVP bodies, guest names, phones, or party tokens. Housekeeping
+  logs are structured counts only.
+- Modify production data while developing.
 
 ## Local development
 
 ```sh
 npm install
-npx wrangler d1 migrations apply invite --local   # once, or after new migrations
-npx wrangler dev --port 8788                      # 8787 is often taken here
+npx wrangler d1 migrations apply invite --local
+npm run build
+npx wrangler dev --port 8788   # 8787 is often taken here
+npm run dev:admin              # :5173, proxies /api to :8788
 ```
 
-### Known limitation: local `POST /api/rsvp` returns 500
-
-Temporary and expected during the platform build-out. The WS1 platform
-migration drops the pre-platform `rsvps` table, and the frozen public
-invitation at `/` still posts to that legacy route. Clicking submit in a
-local browser therefore fails until WS6/WS8 replace it with
-`POST /i/{slug}/rsvp`.
-
-No compatibility shim will be added for it: that code would only be
-deleted again a few workstreams later.
-
-Nothing else is affected — the Worker suite creates the table itself in
-`tests/setup.ts`, the e2e suite posts to its own stub
-(`tests/e2e/server.mjs`), and production still runs the pre-platform
-schema.
-
-Secrets for local dev live in `.dev.vars` (never commit).
+Cron (housekeeping) locally: the `scheduled` handler runs on deploy only
+if `triggers.crons` is set in the deployer's `wrangler.jsonc` (not in
+the example file). Invoke manually via
+`POST /api/v1/platform/housekeeping/run`.
 
 ## Before finishing any change
 
-1. `npm test` — Worker/API suite (vitest)
-2. `npx tsc --noEmit` — typecheck
-3. `node --check public/js/*.js` — if you touched frontend JS
-4. `npm run test:e2e` — browser suite at 375/390/430, incl. visual
-   baselines. Use `npm run test:e2e:update` after intentional visual
-   changes.
-5. Verify in a browser at a phone viewport (~390×844): the canvas
-   drifts, drags, the countdown ticks, and the RSVP form submits.
+1. `npm run typecheck`
+2. `npm test` — Worker/API suite (vitest, real D1+R2)
+3. `node --check public/themes/*/js/*.js` — if you touched guest JS
+4. `npm run build` — both consoles must compile
+5. `npm run test:e2e` / `test:admin` — browser suites. Baselines:
+   cinematic frozen (do not touch); editorial has its own.
+6. Phone viewports (375/390/430): drift/countdown/RSVP/autosave/preview.
 
-Commit with a concise imperative message (`feat:`, `fix:`, `chore:`).
+Do not merge to `main` until the workstream is green (feature-branch
+workflow). Do not tag a release from a feature branch.
 
-## Assets
-
-Photography and music slots are documented in
-`public/assets/README.md`. Missing files degrade gracefully: the
-renderer reads the `ready` flag in `content.js` and never requests an
-asset that has not been supplied, so an incomplete set produces no
-network errors.
-
-## Deploy — ALWAYS deploy after done
-
-Every completed change must be deployed, not just committed:
+## Deploy
 
 ```sh
 npx wrangler deploy
 ```
 
-Then verify the deployed URL loads and reflects the change.
+Verify the deployed URL reflects the change.

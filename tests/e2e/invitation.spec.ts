@@ -245,9 +245,21 @@ test.describe("wedding data", () => {
     await expect(wedding).toHaveText("9");
   });
 
-  test("countdown renders four two-digit units", async ({ page }) => {
+  test("countdown renders four units with full day values (V2: no 99-day cap)", async ({
+    page,
+  }) => {
     await expect(page.locator(".countdown__pair")).toHaveCount(4);
-    await expect(page.locator(".countdown__digit")).toHaveCount(8);
+    // Hours/minutes/seconds stay two digits; days grow to fit (the frozen
+    // fixture is >99 days out, so it exercises the hundreds digit).
+    const daysText = await page.locator(".countdown__pair[data-unit='days']").textContent();
+    const expectedDays = Math.min(
+      999,
+      Math.max(
+        0,
+        Math.floor((new Date("2027-10-09T11:00:00+08:00").getTime() - Date.now()) / 86400000)
+      )
+    );
+    expect(daysText?.replace(/\D/g, "")).toBe(String(expectedDays));
     for (const label of ["天", "时", "分", "秒"]) {
       await expect(page.locator(".countdown__label", { hasText: label })).toBeVisible();
     }

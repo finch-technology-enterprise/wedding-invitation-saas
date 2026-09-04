@@ -713,7 +713,7 @@ describe("partial failure semantics", () => {
 });
 
 describe("focal point", () => {
-  test("a focal point is stored as simple portable percentages", async () => {
+  test("a focal point is stored canonically at media.{slot}.focal", async () => {
     const { asset } = await body<{ asset: { id: string } }>(await upload(alice, jpeg(), { slot: "hero" }));
 
     const res = await req(`/api/v1/invitations/${alice.invitationId}/media/${asset.id}`, {
@@ -726,11 +726,14 @@ describe("focal point", () => {
     const row = await env.DB.prepare("SELECT draft_json AS d FROM invitations WHERE id = ?")
       .bind(alice.invitationId)
       .first<{ d: string }>();
-    expect(JSON.parse(row!.d).focal[asset.id]).toEqual({ x: 50, y: 32 });
+    expect(JSON.parse(row!.d).media.hero).toMatchObject({
+      assetId: asset.id,
+      focal: { x: 50, y: 32 },
+    });
   });
 
   test("out-of-range focal values are rejected", async () => {
-    const { asset } = await body<{ asset: { id: string } }>(await upload(alice, jpeg()));
+    const { asset } = await body<{ asset: { id: string } }>(await upload(alice, jpeg(), { slot: "hero" }));
 
     for (const focal of [{ x: -1, y: 0 }, { x: 0, y: 101 }, { x: "50", y: 50 }, null]) {
       const res = await req(`/api/v1/invitations/${alice.invitationId}/media/${asset.id}`, {
@@ -740,5 +743,16 @@ describe("focal point", () => {
       });
       expect(res.status).toBe(400);
     }
+  });
+
+  test("focal without a photo slot is rejected", async () => {
+    const { asset } = await body<{ asset: { id: string } }>(await upload(alice, jpeg()));
+
+    const res = await req(`/api/v1/invitations/${alice.invitationId}/media/${asset.id}`, {
+      method: "PATCH",
+      headers: { cookie: alice.cookie, "content-type": "application/json" },
+      body: JSON.stringify({ focal: { x: 50, y: 50 } }),
+    });
+    expect(res.status).toBe(422);
   });
 });

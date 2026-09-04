@@ -98,9 +98,11 @@ export interface DraftResponse {
   ok: true;
   draft: Record<string, unknown> | null;
   draftUpdatedAt: number | null;
+  draftVersion: number;
   status: string;
   hasPublished: boolean;
   manifest: ThemeManifest;
+  theme?: { id: string; displayName: string; version: number } | null;
 }
 
 export function useDraft(id: string | undefined) {
@@ -147,9 +149,31 @@ function invalidateInvitation(qc: QueryClient, id: string) {
 export function useSaveDraft(id: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (config: Record<string, unknown>) =>
-      api.put<{ ok: true; draftUpdatedAt: number }>(`/invitations/${id}/draft`, { config }),
+    mutationFn: (input: { config: Record<string, unknown>; expectedVersion: number | null }) =>
+      api.put<{ ok: true; draftUpdatedAt: number; draftVersion: number }>(
+        `/invitations/${id}/draft`,
+        input
+      ),
     onSuccess: () => invalidateInvitation(qc, id),
+  });
+}
+
+export function useThemes() {
+  return useQuery({
+    queryKey: ["themes"] as const,
+    queryFn: () =>
+      api.get<{
+        ok: true;
+        themes: Array<{
+          id: string;
+          displayName: string;
+          version: number;
+          sections: string[];
+          mediaSlots: string[];
+          customization: string[];
+        }>;
+      }>("/themes"),
+    staleTime: 60_000,
   });
 }
 

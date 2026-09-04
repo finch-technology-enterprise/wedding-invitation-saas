@@ -74,13 +74,7 @@ export function FocalPicker({
     <div>
       <Box
         ref={ref}
-        role="slider"
-        tabIndex={0}
-        aria-label="Focal point"
-        aria-valuetext={`${value.x}% from left, ${value.y}% from top`}
-        aria-valuenow={value.x}
-        aria-valuemin={0}
-        aria-valuemax={100}
+        role="presentation"
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onKeyDown={onKeyDown}
@@ -127,6 +121,37 @@ export function FocalPicker({
           }}
         />
       </Box>
+      {/* Dual-value AT interface: a single slider cannot expose an (x, y)
+          pair (V2 §1.7). Pointer/keyboard on the preview above stays as a
+          fast path; these sliders are the accessible control. */}
+      <div role="group" aria-label="Focal point position" style={{ display: "flex", gap: 12, marginTop: 8 }}>
+        <label style={{ flex: 1, fontSize: 12 }}>
+          Horizontal ({value.x}%)
+          <input
+            type="range"
+            min={0}
+            max={100}
+            step={0.5}
+            value={value.x}
+            aria-label="Focal point horizontal position"
+            onChange={(e) => onChange({ ...value, x: Number(e.target.value) })}
+            style={{ width: "100%" }}
+          />
+        </label>
+        <label style={{ flex: 1, fontSize: 12 }}>
+          Vertical ({value.y}%)
+          <input
+            type="range"
+            min={0}
+            max={100}
+            step={0.5}
+            value={value.y}
+            aria-label="Focal point vertical position"
+            onChange={(e) => onChange({ ...value, y: Number(e.target.value) })}
+            style={{ width: "100%" }}
+          />
+        </label>
+      </div>
       <Text size="xs" c="dimmed" mt={6}>
         Drag or use arrow keys to choose what stays in frame · {value.x}% / {value.y}%
       </Text>

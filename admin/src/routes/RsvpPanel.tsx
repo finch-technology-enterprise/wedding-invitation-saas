@@ -8,6 +8,7 @@ import { notifications } from "@mantine/notifications";
 import { useEditor } from "./InvitationEditor";
 import { LimitedField } from "../components/LimitedField";
 import { FormBuilder, type BuilderField } from "../components/FormBuilder";
+import { fromIso, toIsoWithOffset } from "../lib/datetime";
 import { api, ApiError } from "../lib/api";
 
 interface FormPayload {
@@ -22,25 +23,6 @@ interface FormPayload {
 
 /** The theme's declared capacity for extra questions. */
 const MAX_CUSTOM_FIELDS = 6;
-
-/** ISO-8601 with explicit offset, matching the theme contract. */
-function toIsoWithOffset(date: Date | null): string {
-  if (!date) return "";
-  const pad = (n: number) => String(Math.floor(Math.abs(n))).padStart(2, "0");
-  const offsetMin = -date.getTimezoneOffset();
-  const sign = offsetMin >= 0 ? "+" : "-";
-  return (
-    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
-    `T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}` +
-    `${sign}${pad(offsetMin / 60)}:${pad(offsetMin % 60)}`
-  );
-}
-
-function fromIso(iso: unknown): Date | null {
-  if (typeof iso !== "string" || !iso) return null;
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? null : d;
-}
 
 /** The reply form: schema, not presentation. */
 function FormEditor({ invitationId }: { invitationId: string }) {
